@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Galaxy Explorer — a Star Wars catalog</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet">
+  <link rel="stylesheet" href="colors_and_type.css">
+  <link rel="stylesheet" href="starwars-font.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <button class="brand" data-testid="brand-home" onclick="GalaxyApp.go('#/browse/people')" aria-label="Galaxy Explorer home">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 3.2a6.8 6.8 0 0 1 6.6 5.2 9.3 9.3 0 0 0-3.3-.9c-2.2-.2-3.6.4-4.8 1-1 .5-1.8.9-3.2.8a3.7 3.7 0 0 1-1.1-.2A6.8 6.8 0 0 1 12 5.2Zm0 13.6a6.8 6.8 0 0 1-6.6-5.2c1 .5 2.1.8 3.4.9 2.2.1 3.5-.5 4.7-1.1 1-.5 1.9-.9 3.3-.8.4 0 .8.1 1.1.2A6.8 6.8 0 0 1 12 18.8Z" fill="currentColor"></path>
+        </svg>
+      </span>
+      <span class="wordmark">Galaxy<span class="accent">Explorer</span></span>
+      <span class="tag">mabl test demo</span>
+    </button>
+
+    <nav class="topnav" data-testid="primary-nav" aria-label="Categories">
+      <button data-nav="people" data-testid="nav-people" onclick="GalaxyApp.go('#/browse/people')">Characters</button>
+      <button data-nav="planets" data-testid="nav-planets" onclick="GalaxyApp.go('#/browse/planets')">Planets</button>
+      <button data-nav="starships" data-testid="nav-starships" onclick="GalaxyApp.go('#/browse/starships')">Starships</button>
+    </nav>
+
+    <span class="topbar-spacer"></span>
+
+    <div class="clock" data-testid="clock" title="Galactic Standard Time (UTC)" aria-label="Galactic Standard Time">
+      <span class="material-symbols-rounded">schedule</span>
+      <time data-testid="clock-time"></time>
+    </div>
+
+    <button class="btn btn-text" data-testid="nav-favorites" onclick="GalaxyApp.go('#/favorites')">
+      <span class="material-symbols-rounded">favorite</span>
+      Favorites<span class="fav-count" data-testid="fav-count"></span>
+    </button>
+    <button class="btn btn-secondary" data-testid="nav-signin" onclick="GalaxyApp.go('#/signin')">Sign in</button>
+  </header>
+
+  <main id="view" data-testid="view"></main>
+
+  <footer class="footer">
+    <span>Data from the <a href="https://swapi.info/" target="_blank" rel="noopener" data-testid="swapi-link">Star Wars API</a>.</span>
+    <span>Built with the mabl Product Design System — a sample app for browser-test automation.</span>
+  </footer>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

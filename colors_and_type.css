@@ -1,0 +1,588 @@
+/* ───────────────────────────────────────────────────────────────
+   mabl Product Design System — Colors, Type, and Foundational Tokens
+   Source of truth: mabl product design system Figma (Foundations pages)
+   Note: separate from the mabl Marketing Design System.
+   ─────────────────────────────────────────────────────────────── */
+
+/* Fonts: ALL self-hosted under /assets/fonts/.
+   - Open Sans (primary UI) — Google variable fonts (wdth + wght axes).
+       Two files cover the entire family: upright + italic. The condensed
+       cut is the same font file, just driven via font-stretch.
+   - Panton (display headlines) — Fontfabric self-hosted. Full licensed
+     proportional family:
+       Thin 100, ExtraLight 200, Light 300, Regular 400, SemiBold 600,
+       Bold 700, ExtraBold 800, Heavy 850, Black 900 — all with italics.
+     Plus 'Panton Fat' (separate family, the wide display cut, regular +
+     italic), and 'Panton Narrow' (condensed display variant, Light + Black).
+*/
+
+/* Open Sans — variable fonts (wdth 75–100, wght 300–800) */
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 300 800;
+  font-stretch: 75% 100%;
+  font-display: swap;
+  src: url('assets/fonts/OpenSans/OpenSans-VariableFont_wdth_wght.ttf') format('truetype-variations');
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-style: italic;
+  font-weight: 300 800;
+  font-stretch: 75% 100%;
+  font-display: swap;
+  src: url('assets/fonts/OpenSans/OpenSans-Italic-VariableFont_wdth_wght.ttf') format('truetype-variations');
+}
+/* Open Sans Condensed — alias the Open Sans variable font, locked to 75% width */
+@font-face {
+  font-family: 'Open Sans Condensed';
+  font-style: normal;
+  font-weight: 300 800;
+  font-stretch: 75%;
+  font-display: swap;
+  src: url('assets/fonts/OpenSans/OpenSans-VariableFont_wdth_wght.ttf') format('truetype-variations');
+}
+@font-face {
+  font-family: 'Open Sans Condensed';
+  font-style: italic;
+  font-weight: 300 800;
+  font-stretch: 75%;
+  font-display: swap;
+  src: url('assets/fonts/OpenSans/OpenSans-Italic-VariableFont_wdth_wght.ttf') format('truetype-variations');
+}
+
+/* Panton (proportional) — full licensed family ─────────────── */
+@font-face { font-family: 'Panton'; font-style: normal; font-weight: 100; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-Thin.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: italic; font-weight: 100; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-ThinItalic.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: normal; font-weight: 200; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-ExtraLight.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: italic; font-weight: 200; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-ExtraLightItalic.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: normal; font-weight: 300; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-Light.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: italic; font-weight: 300; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-LightItalic.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: normal; font-weight: 400 500; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-Regular.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: italic; font-weight: 400 500; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-RegularItalic.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-SemiBold.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: italic; font-weight: 600; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-SemiBoldItalic.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-Bold.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: italic; font-weight: 700; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-BoldItalic.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: normal; font-weight: 800; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-ExtraBold.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: italic; font-weight: 800; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-ExtraBoldItalic.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: normal; font-weight: 850; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-Heavy.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: italic; font-weight: 850; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-HeavyItalic.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: normal; font-weight: 900; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-Black.otf') format('opentype'); }
+@font-face { font-family: 'Panton'; font-style: italic; font-weight: 900; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-BlackItalic.otf') format('opentype'); }
+
+/* Panton Fat — separate family for the wide display cut ─────── */
+@font-face { font-family: 'Panton Fat'; font-style: normal; font-weight: 400 900; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-Fat.otf') format('opentype'); }
+@font-face { font-family: 'Panton Fat'; font-style: italic; font-weight: 400 900; font-display: swap;
+  src: url('assets/fonts/Panton/Panton-FatItalic.otf') format('opentype'); }
+
+/* Panton Narrow (condensed display variant — Light + Black cuts) */
+@font-face { font-family: 'Panton Narrow'; font-style: normal; font-weight: 300; font-display: swap;
+  src: url('assets/fonts/Panton/PantonNarrowDemo-Light.otf') format('opentype'); }
+@font-face { font-family: 'Panton Narrow'; font-style: italic; font-weight: 300; font-display: swap;
+  src: url('assets/fonts/Panton/PantonNarrowDemo-LightItalic.otf') format('opentype'); }
+@font-face { font-family: 'Panton Narrow'; font-style: normal; font-weight: 400 900; font-display: swap;
+  src: url('assets/fonts/Panton/PantonNarrowDemo-Black.otf') format('opentype'); }
+@font-face { font-family: 'Panton Narrow'; font-style: italic; font-weight: 400 900; font-display: swap;
+  src: url('assets/fonts/Panton/PantonNarrowDemo-BlackItalic.otf') format('opentype'); }
+
+/* Material Symbols — self-hosted variable icon fonts ─────────── */
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: block;
+  src: url('assets/fonts/MaterialSymbols/MaterialSymbolsOutlined.ttf') format('truetype-variations');
+}
+@font-face {
+  font-family: 'Material Symbols Rounded';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: block;
+  src: url('assets/fonts/MaterialSymbols/MaterialSymbolsRounded.ttf') format('truetype-variations');
+}
+@font-face {
+  font-family: 'Material Symbols Sharp';
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: block;
+  src: url('assets/fonts/MaterialSymbols/MaterialSymbolsSharp.ttf') format('truetype-variations');
+}
+
+:root {
+  /* ─── PRIMITIVE COLORS ─── */
+  /* Gray scale */
+  --gray-0:    #FFFFFF;
+  --gray-50:   #FBFBFC;
+  --gray-100:  #E4E5E8;
+  --gray-200:  #C5C8CE;
+  --gray-225:  #C4C4C4;
+  --gray-300:  #9AA0AC;  /* updated 2026-04 — was #A0A5AF */
+  --gray-400:  #707888;  /* updated 2026-04 — was #676F7E */
+  --gray-500:  #58606E;  /* updated 2026-04 — was #56637A */
+  --gray-600:  #444E61;
+  --gray-675:  #3B3B3B;
+  --gray-700:  #323947;
+  --gray-800:  #20252E;
+  --gray-900:  #0E1014;
+  --gray-1000: #000000;
+
+  /* Purple — primary brand / action */
+  --purple-50:  #EAEAF9;
+  --purple-100: #CBCAEF;
+  --purple-200: #A9A8E5;
+  --purple-300: #8785DA;
+  --purple-400: #6B68CF;
+  --purple-500: #736EDB;
+  --purple-600: #5244BC;
+  --purple-700: #4A39B0;
+  --purple-800: #37188E;
+  --purple-900: #18172E;
+
+  /* Pink — accent / agentic */
+  --pink-50:  #FCE4F8;
+  --pink-100: #F6BAEE;
+  --pink-200: #F089E4;
+  --pink-300: #E84FD9;
+  --pink-400: #E100D0;
+  --pink-500: #D300C3;
+  --pink-600: #C400BF;
+  --pink-700: #AE00B9;
+  --pink-800: #870190;
+  --pink-900: #520075;
+
+  /* Red — danger / failed / error */
+  --red-50:  #FFEAEC;
+  --red-100: #FFCACD;
+  --red-200: #FF9595;
+  --red-300: #E66C65;
+  --red-400: #EE4A3D;
+  --red-500: #F1391C;
+  --red-600: #E32D1C;
+  --red-700: #BC1610;
+  --red-800: #990000;
+  --red-900: #660000;
+
+  /* Yellow / orange — warning / not-run */
+  --yellow-50:  #FFF3E0;
+  --yellow-100: #FFE0B2;
+  --yellow-200: #FFCC80;
+  --yellow-300: #FFB74D;
+  --yellow-400: #FF9800;
+  --yellow-500: #F57C00;
+  --yellow-600: #E65100;
+  --yellow-700: #C54600;
+  --yellow-800: #A13900;
+  --yellow-900: #762A00;
+
+  /* Green — passed / success */
+  --green-50:  #DFF4EB;
+  --green-100: #B2E3CE;
+  --green-200: #7CD0AF;
+  --green-300: #34BE90;
+  --green-400: #00B079;
+  --green-500: #00A263;
+  --green-600: #009458;
+  --green-700: #00824B;
+  --green-800: #00713F;
+  --green-900: #005229;
+
+  /* Teal — info / secondary accent */
+  --teal-50:  #DFF7F7;
+  --teal-100: #B0EAEB;
+  --teal-200: #7DDCDF;
+  --teal-300: #47CDD4;
+  --teal-400: #16C3CC;
+  --teal-500: #00B9C6;
+  --teal-600: #00A9B4;
+  --teal-700: #00949B;
+  --teal-800: #008084;
+  --teal-900: #005C5A;
+
+  /* Blue — links / graphs */
+  --blue-700: #005BD2;
+
+  /* ─── SEMANTIC TOKENS ─── */
+  /* Palette — semantic light/main/dark per Storybook foundations.
+     palette.X.main is the "this is the canonical X" hex you use when
+     rendering a single swatch. Light/dark are the paired surface
+     and contrast colors used together in product UI. */
+  --gray-light: var(--gray-200);   /* #C5C8CE */
+  --gray-main:  var(--gray-600);   /* #444E61 */
+  --gray-dark:  var(--gray-800);   /* #20252E */
+
+  --red-light: var(--red-200);     /* #FF9595 */
+  --red-main:  var(--red-600);     /* #E32D1C */
+  --red-dark:  var(--red-800);     /* #990000 */
+
+  --green-light: var(--green-200); /* #7CD0AF */
+  --green-main:  var(--green-700); /* #00824B */
+  --green-dark:  var(--green-900); /* #005229 */
+
+  --yellow-light: var(--yellow-200); /* #FFCC80 */
+  --yellow-main:  var(--yellow-400); /* #FF9800 */
+  --yellow-dark:  var(--yellow-600); /* #E65100 */
+
+  --teal-light: var(--teal-100);   /* #B0EAEB */
+  --teal-main:  var(--teal-400);   /* #16C3CC */
+  --teal-dark:  var(--teal-900);   /* #005C5A */
+
+  --pink-light: var(--pink-100);   /* #F6BAEE */
+  --pink-main:  var(--pink-500);   /* #D300C3 */
+  --pink-dark:  var(--pink-900);   /* #520075 */
+
+  /* Accessibility / status (axe-style severity tokens) */
+  --accessibility-critical:    var(--red-900);    /* #660000 */
+  --accessibility-serious:     var(--red-600);    /* #E32D1C */
+  --accessibility-moderate:    var(--yellow-500); /* #F57C00 */
+  --accessibility-minor:       var(--gray-200);   /* #C5C8CE */
+  --accessibility-incomplete:  var(--gray-600);   /* #444E61 */
+  --accessibility-inapplicable:var(--gray-800);   /* #20252E */
+  --accessibility-passing:     var(--green-700);  /* #00824B */
+
+  /* Test result statuses (the most-used tokens in the product) */
+  --status-passed:  var(--green-700);  /* #00824B */
+  --status-failed:  var(--red-600);    /* #E32D1C */
+  --status-not-run: var(--gray-800);
+  --status-skipped: var(--yellow-400);
+  --status-stopped: var(--yellow-400);
+
+  /* Core Web Vitals categories */
+  --cwv-good-bg:      var(--green-100);  /* #B2E3CE */
+  --cwv-good-text:    var(--green-900);  /* #005229 */
+  --cwv-moderate-bg:  var(--yellow-100); /* #FFE0B2 */
+  --cwv-moderate-text:var(--yellow-900); /* #762A00 */
+  --cwv-poor-bg:      var(--red-50);     /* #FFEAEC */
+  --cwv-poor-text:    var(--red-800);    /* #990000 */
+  --cwv-custom-bg:    var(--purple-50);  /* #EAEAF9 */
+  --cwv-custom-text:  var(--purple-900); /* #18172E */
+
+  /* Graph palette (categorical) */
+  --graph-purple: var(--purple-400); /* #6B68CF */
+  --graph-pink:   var(--pink-300);   /* #E84FD9 */
+  --graph-green:  var(--green-300);  /* #34BE90 */
+  --graph-yellow: var(--yellow-700); /* #C54600 */
+  --graph-grey:   var(--gray-200);   /* #C5C8CE */
+  --graph-red:    var(--red-700);    /* #BC1610 */
+  --graph-blue:   var(--blue-700);   /* #005BD2 */
+
+  /* Nested-level categorical palettes
+     `group` differentiates tree levels (teal/green family).
+     `flow` differentiates step nodes in flow diagrams (purple/pink family). */
+  --nested-group-0: var(--teal-400);   /* #16C3CC */
+  --nested-group-1: var(--green-300);  /* #34BE90 */
+  --nested-group-2: var(--teal-200);   /* #7DDCDF */
+  --nested-group-3: var(--green-200);  /* #7CD0AF */
+
+  --nested-flow-0:  var(--purple-400); /* #6B68CF */
+  --nested-flow-1:  var(--pink-500);   /* #D300C3 */
+  --nested-flow-2:  var(--purple-200); /* #A9A8E5 */
+  --nested-flow-3:  var(--pink-200);   /* #F089E4 */
+
+  /* Interactive */
+  --interactive-primary: var(--purple-400); /* #6B68CF */
+
+  /* Secondary button (purple text on near-white)
+     Per Storybook: text + borderHover are purple-700; border is purple-100. */
+  --secondary-btn-text:        var(--purple-700);
+  --secondary-btn-text-hover:  var(--purple-700);
+  --secondary-btn-border:      var(--purple-100);
+  --secondary-btn-border-hover:var(--purple-700);
+  --secondary-btn-bg:          var(--gray-50);
+  --secondary-btn-bg-hover:    var(--gray-50);
+
+  /* Backgrounds */
+  --bg-page:           var(--gray-0);
+  --bg-canvas:         var(--gray-50);   /* #FBFBFC artboard background */
+  --bg-highlight:      var(--purple-50); /* #EAEAF9 — also form.background.highlight */
+  --bg-pink-highlight: var(--pink-50);
+  --bg-dark:           var(--gray-900);
+  --bg-darker:         var(--gray-1000);
+
+  /* Purple background (paired surface + border) */
+  --purple-bg-surface: var(--purple-50);  /* #EAEAF9 */
+  --purple-bg-border:  var(--purple-100); /* #CBCAEF */
+
+  /* Alternative gray scale — used in inverted/dark contexts.
+     Note: alt-gray-800 collapses to gray-100 on purpose (a dark-on-light
+     surface in inverted contexts). Inverted is true black, plus a paired
+     near-charcoal #323947 for level-2 surfaces. */
+  --alt-gray-50:           var(--gray-50);   /* #FBFBFC */
+  --alt-gray-100:          var(--gray-100);  /* #E4E5E8 */
+  --alt-gray-200:          var(--gray-200);  /* #C5C8CE */
+  --alt-gray-400:          var(--gray-400);  /* #707888 */
+  --alt-gray-600:          var(--gray-600);  /* #444E61 */
+  --alt-gray-800:          var(--gray-100);  /* #E4E5E8 (inverted) */
+  --alt-gray-inverted:     #000000;
+  --alt-gray-inverted-200: #323947;
+
+  /* Form fields */
+  --formfield-outline: var(--gray-225);
+  --formfield-icon:    var(--gray-900);
+  --formfield-text:    var(--gray-800);
+  --formfield-label:   var(--gray-600);
+
+  /* Foreground / text */
+  --fg-primary:    var(--gray-800);   /* #20252E — display, body */
+  --fg-secondary:  var(--gray-600);   /* #444E61 — labels, captions */
+  --fg-tertiary:   var(--gray-500);   /* #58606E — "hint" / subtle text in light theme (gray-300 in dark) */
+  --fg-disabled:   var(--gray-400);   /* #707888 — disabled text/iconography */
+  --fg-inverse:    var(--gray-0);
+  --fg-link:       var(--purple-700);
+  --fg-link-hover: var(--purple-800);
+  --fg-danger:     var(--red-600);
+
+  /* Borders */
+  --border-subtle:  var(--gray-100);
+  --border-default: var(--gray-200);
+  --border-strong:  var(--gray-300);
+  --border-focus:   var(--purple-400);
+
+  /* ─── GRADIENTS — agentic / AI ─── */
+  /* Two-color: teal → purple at 225° (the canonical mabl AI gradient) */
+  --gradient-ai-50:  linear-gradient(225deg, #DFF7F7 15%, #EAEAF9 85%);
+  --gradient-ai-100: linear-gradient(225deg, #B0EAEB 15%, #CBCAEF 85%);
+  --gradient-ai-300: linear-gradient(225deg, #47CDD4 10%, #6B68CF 56%);
+  --gradient-ai-500: linear-gradient(225deg, #00B9C6 10%, #5244BC 56%);
+  --gradient-ai-700: linear-gradient(225deg, #00949B 10%, #37188E 56%);
+  --gradient-ai-900: linear-gradient(225deg, #005C5A 10%, #18172E 56%);
+
+  /* Three-color: teal → purple → pink at 225° (used on hero AI surfaces) */
+  --gradient-ai3-50:  linear-gradient(225deg, #DFF7F7 12.59%, #EAEAF9 60.8%, #FCE4F8 103.65%);
+  --gradient-ai3-100: linear-gradient(225deg, #B0EAEB 12.59%, #CBCAEF 60.8%, #F6BAEE 103.65%);
+  --gradient-ai3-300: linear-gradient(225deg, #47CDD4 15.83%, #6B68CF 63.34%, #E84FD9 105.56%);
+  --gradient-ai3-500: linear-gradient(225deg, #00B9C6 15.83%, #5244BC 63.34%, #D300C3 105.56%);
+  --gradient-ai3-700: linear-gradient(225deg, #00949B 15.83%, #37188E 63.34%, #AE00B9 105.56%);
+  --gradient-ai3-900: linear-gradient(225deg, #005C5A 15.83%, #18172E 63.34%, #870190 105.56%);
+
+  /* Two-color: pink → purple (alternate AI mark, more vivid) */
+  --gradient-pink-purple-300: linear-gradient(225deg, #8785DA 15%, #E84FD9 85%);
+  --gradient-pink-purple-500: linear-gradient(225deg, #736EDB 15%, #D300C3 85%);
+  --gradient-pink-purple-700: linear-gradient(225deg, #4A39B0 15%, #AE00B9 85%);
+
+  /* Two-color: orange → pink (warm energy gradient, used on marketing surfaces) */
+  --gradient-orange-pink-300: linear-gradient(225deg, #E84FD9 15%, #FFB74D 85%);
+  --gradient-orange-pink-500: linear-gradient(225deg, #D300C3 15%, #FF9800 85%);
+  --gradient-orange-pink-700: linear-gradient(225deg, #AE00B9 15%, #C54600 85%);
+
+  /* ─── RADIUS ─── */
+  --radius-none: 0;
+  --radius-xs:   2px;   /* quarter */
+  --radius-sm:   4px;   /* half */
+  --radius-md:   8px;   /* 1× */
+  --radius-lg:   16px;  /* 2× */
+  --radius-xl:   24px;  /* 3× */
+  --radius-full: 9999px;
+
+  /* ─── SPACING ─── */
+  --spacing-none: 0;
+  --spacing-xs:   4px;   /* half */
+  --spacing-sm:   8px;   /* 1× */
+  --spacing-md:   16px;  /* 2× */
+  --spacing-lg:   24px;  /* 3× */
+  --spacing-xl:   32px;  /* 4× */
+  --spacing-2xl:  40px;  /* 5× */
+  --spacing-3xl:  48px;  /* 6× */
+
+  /* ─── ELEVATION / SHADOWS ─── */
+  /* mabl shadows are soft & low-spread; rgba(8,8,8,0.05) is the primitive */
+  --shadow-1: 0 1px 2px rgba(8, 8, 8, 0.05);
+  --shadow-2: 0 1px 3px rgba(8, 8, 8, 0.06), 0 1px 2px rgba(8, 8, 8, 0.04);
+  --shadow-3: 0 4px 8px rgba(8, 8, 8, 0.06), 0 2px 4px rgba(8, 8, 8, 0.04);
+  --shadow-4: 0 8px 16px rgba(8, 8, 8, 0.08), 0 4px 8px rgba(8, 8, 8, 0.05);
+  --shadow-5: 0 16px 32px rgba(8, 8, 8, 0.10), 0 8px 16px rgba(8, 8, 8, 0.06);
+  --shadow-focus: 0 0 0 3px rgba(107, 104, 207, 0.32);
+
+  /* ─── TYPOGRAPHY ─── */
+  /* Families */
+  --font-display: 'Panton', 'Open Sans', system-ui, sans-serif;
+  --font-body:    'Open Sans', system-ui, -apple-system, sans-serif;
+  --font-condensed: 'Open Sans Condensed', 'Open Sans', sans-serif;
+  --font-mono:    ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* Weights */
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+  --weight-extrabold:800;
+
+  /* Type scale (px / line-height) — pulled from /Foundations/Typography */
+  --fs-xs:   10px;   --lh-xs:   17.5px;
+  --fs-sm:   12px;   --lh-sm:   17.5px;
+  --fs-md:   14px;   --lh-md:   24.5px;
+  --fs-base: 16px;   --lh-base: 24.5px;
+  --fs-lg:   18px;   --lh-lg:   24.5px;
+  --fs-xl:   20px;   --lh-xl:   28px;
+  --fs-2xl:  22.4px; --lh-2xl:  32px;   /* H3 */
+  --fs-3xl:  25.6px; --lh-3xl:  36px;   /* H2 */
+  --fs-4xl:  32px;   --lh-4xl:  40px;   /* H1 / Display */
+
+  /* Letter-spacing */
+  --tracking-tight:  -0.01em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.02em;
+  --tracking-button: 0.04em;  /* button labels are slightly tracked */
+  --tracking-caps:   0.08em;
+
+  /* ─── MOTION ─── */
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+}
+
+/* ─── SEMANTIC TYPOGRAPHY (apply to actual elements) ─── */
+
+html, body {
+  font-family: var(--font-body);
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+  color: var(--fg-primary);
+  background: var(--bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, .h1 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--fs-4xl);
+  line-height: 100%;
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-primary);
+}
+
+h2, .h2 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--fs-3xl);
+  line-height: 100%;
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-primary);
+}
+
+h3, .h3 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--fs-2xl);
+  line-height: 100%;
+  color: var(--fg-primary);
+}
+
+h4, .h4 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: var(--fs-xl);
+  line-height: 100%;
+  color: var(--fg-primary);
+}
+
+h5, .h5 {
+  font-family: var(--font-body);
+  font-weight: var(--weight-bold);
+  font-size: var(--fs-lg);
+  line-height: 1.4;
+  color: var(--fg-primary);
+}
+
+p, .body {
+  font-family: var(--font-body);
+  font-weight: var(--weight-regular);
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+  color: var(--fg-primary);
+}
+
+.body-lg {
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+}
+
+.body-sm, small {
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  color: var(--fg-secondary);
+}
+
+.caption, .form-helper {
+  font-family: var(--font-body);
+  font-weight: var(--weight-regular);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--fg-secondary);
+}
+
+.form-label {
+  font-family: var(--font-body);
+  font-weight: var(--weight-bold);
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+  color: var(--formfield-label);
+}
+
+.form-text {
+  font-family: var(--font-body);
+  font-weight: var(--weight-regular);
+  font-size: var(--fs-md);
+  line-height: 1.4;
+  color: var(--formfield-text);
+}
+
+.button-label {
+  font-family: var(--font-body);
+  font-weight: var(--weight-bold);
+  font-size: var(--fs-md);
+  line-height: 1;
+  letter-spacing: var(--tracking-button);
+}
+
+.tooltip-text {
+  font-family: var(--font-body);
+  font-weight: var(--weight-regular);
+  font-size: var(--fs-sm);
+  line-height: 1.3;
+  color: var(--fg-inverse);
+}
+
+.eyebrow {
+  font-family: var(--font-body);
+  font-weight: var(--weight-bold);
+  font-size: var(--fs-xs);
+  line-height: 1;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-secondary);
+}
+
+code, kbd, .mono {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+a {
+  color: var(--fg-link);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+a:hover { color: var(--fg-link-hover); text-decoration: underline; }

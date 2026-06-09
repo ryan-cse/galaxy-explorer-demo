@@ -1,0 +1,125 @@
+name: Deploy → Test → Report
+
+on:
+  push:
+    branches: [main]
+
+# Required for GitHub Pages deployment
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  # ── 1. Deploy to GitHub Pages ──────────────────────────────────────
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          # Keep .github out of the published site
+          exclude_assets: '.github'
+
+  # ── 2. Run mabl tests against the live site ────────────────────────
+  test:
+    needs: deploy
+    runs-on: ubuntu-latest
+    outputs:
+      event_token: ${{ steps.trigger.outputs.event_token }}
+      status: ${{ steps.poll.outputs.status }}
+      results_url: ${{ steps.poll.outputs.results_url }}
+    steps:
+      # Pages can take 30–60 s to propagate after the gh-pages push
+      - name: Wait for Pages propagation
+        run: sleep 60
+
+      - name: Trigger mabl test run
+        id: trigger
+        run: |
+          AUTH=$(echo -n "key:${{ secrets.MABL_API_KEY }}" | base64 -w 0)
+          RESPONSE=$(curl -sf -X POST \
+            "https://api.mabl.com/events/deployment" \
+            -H "Authorization: Basic $AUTH" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"environment_id\": \"${{ secrets.MABL_ENVIRONMENT_ID }}\",
+              \"application_id\": \"${{ secrets.MABL_APPLICATION_ID }}\",
+              \"plan_labels\": [{\"name\": \"ci\"}],
+              \"browser_types\": [\"chrome\"],
+              \"revision\": \"${{ github.sha }}\"
+            }")
+          echo "event_token=$(echo $RESPONSE | jq -r '.id // empty')" >> $GITHUB_OUTPUT
+
+      - name: Poll for test completion
+        id: poll
+        run: |
+          AUTH=$(echo -n "key:${{ secrets.MABL_API_KEY }}" | base64 -w 0)
+          # Poll every 30 s, up to 20 minutes
+          for i in $(seq 1 40); do
+            sleep 30
+            RESULT=$(curl -sf \
+              "https://api.mabl.com/execution/result/event/${{ steps.trigger.outputs.event_token }}" \
+              -H "Authorization: Basic $AUTH")
+            STATUS=$(echo $RESULT | jq -r '.status // empty')
+            echo "Poll $i — status: $STATUS"
+            if [[ "$STATUS" == "SUCCEEDED" || "$STATUS" == "FAILED" || "$STATUS" == "SKIPPED" ]]; then
+              echo "status=$STATUS" >> $GITHUB_OUTPUT
+              echo "results_url=$(echo $RESULT | jq -r '.mabl_branch_url // empty')" >> $GITHUB_OUTPUT
+              break
+            fi
+          done
+
+  # ── 3. File Jira issue + Slack alert on failure ────────────────────
+  report-failure:
+    needs: test
+    if: needs.test.outputs.status == 'FAILED'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Jira issue
+        run: |
+          AUTH=$(echo -n "${{ secrets.JIRA_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" | base64 -w 0)
+          SUMMARY="Test failure: galaxy-explorer @ $(echo '${{ github.sha }}' | cut -c1-8)"
+          BODY="Automated mabl test suite failed after deploying to GitHub Pages.\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Actor:* ${{ github.actor }}\n*Workflow run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n*mabl results:* ${{ needs.test.outputs.results_url }}\n\n*Reproduction:*\nNavigate to https://ryan-cse.github.io/galaxy-explorer-demo?demo=true and execute the failing test steps."
+          curl -sf -X POST \
+            "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue" \
+            -H "Authorization: Basic $AUTH" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"fields\": {
+                \"project\": {\"key\": \"${{ secrets.JIRA_PROJECT_KEY }}\"},
+                \"summary\": \"$SUMMARY\",
+                \"issuetype\": {\"name\": \"Bug\"},
+                \"priority\": {\"name\": \"High\"},
+                \"labels\": [\"ci\", \"galaxy-explorer\", \"mabl\"],
+                \"description\": {
+                  \"version\": 1, \"type\": \"doc\",
+                  \"content\": [{
+                    \"type\": \"paragraph\",
+                    \"content\": [{\"type\": \"text\", \"text\": \"$BODY\"}]
+                  }]
+                }
+              }
+            }"
+
+      - name: Send Slack alert
+        run: |
+          SHA_SHORT=$(echo '${{ github.sha }}' | cut -c1-8)
+          curl -sf -X POST '${{ secrets.SLACK_WEBHOOK_URL }}' \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "text": ":x: *Galaxy Explorer — test failure* (`'"$SHA_SHORT"'`)",
+              "attachments": [{
+                "color": "danger",
+                "fields": [
+                  {"title": "Branch", "value": "${{ github.ref_name }}", "short": true},
+                  {"title": "Actor", "value": "${{ github.actor }}", "short": true},
+                  {"title": "GitHub Actions", "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>", "short": true},
+                  {"title": "mabl Results", "value": "<${{ needs.test.outputs.results_url }}|View in mabl>", "short": true}
+                ]
+              }]
+            }'
