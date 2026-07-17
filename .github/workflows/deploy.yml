@@ -1,90 +1,94 @@
-name: Deploy → Test → Report
+name: CI — unit tests → deploy → mabl E2E → report
+
+# Agentic quality pipeline for Galaxy Explorer.
+#   1. unit-test : Claude-authored Vitest suite (dev-QA layer) — gates everything
+#   2. deploy    : publish the static site to GitHub Pages (official actions)
+#   3. e2e       : mabl deployment event via the official run-mabl-tests Action
+#                  (independent verification layer; results appear as a PR check
+#                   when the mabl bot GitHub app is installed)
+#   4. report    : on mabl failure, file a Jira bug (SUP) + Slack alert
+#
+# See docs/MABL-AGENTIC-CICD-SETUP.md for the full setup guide + manual steps.
 
 on:
   push:
     branches: [main]
 
-# Required for GitHub Pages deployment
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  # ── 1. Deploy to GitHub Pages ──────────────────────────────────────
-  deploy:
+  # ── 1. Unit tests (dev-QA layer) — must pass before we deploy ──────
+  unit-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - uses: actions/setup-node@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
-          # Keep .github out of the published site
-          exclude_assets: '.github'
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
 
-  # ── 2. Run mabl tests against the live site ────────────────────────
-  test:
+  # ── 2. Deploy the static site to GitHub Pages (official actions) ───
+  #     Requires: repo Settings → Pages → Source = "GitHub Actions".
+  deploy:
+    needs: unit-test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'            # static app lives at repo root
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ── 3. mabl E2E (independent verification layer) ──────────────────
+  #     Official Action triggers a mabl deployment event and polls to completion.
+  #     Auto-passes github.sha → enables the mabl PR check (via mabl bot app).
+  #     A plan only runs if it matches app/env + the "ci" label (CASE-SENSITIVE),
+  #     is active, has ≥1 test enabled, AND has the deployment trigger toggled ON.
+  e2e:
     needs: deploy
     runs-on: ubuntu-latest
-    outputs:
-      event_token: ${{ steps.trigger.outputs.event_token }}
-      status: ${{ steps.poll.outputs.status }}
-      results_url: ${{ steps.poll.outputs.results_url }}
     steps:
-      # Pages can take 30–60 s to propagate after the gh-pages push
-      - name: Wait for Pages propagation
-        run: sleep 60
+      # NOTE: confirm exact input names against the marketplace README:
+      # https://github.com/marketplace/actions/run-mabl-tests
+      - name: Run mabl tests
+        uses: mablhq/mabl-tests-action@v1
+        env:
+          MABL_API_KEY: ${{ secrets.MABL_API_KEY }}   # MUST be a "CI/CD integration" key type
+        with:
+          application-id: ${{ secrets.MABL_APPLICATION_ID }}
+          environment-id: ${{ secrets.MABL_ENVIRONMENT_ID }}
+          plan-labels: ci
+          # browser-types: chrome            # optional override
+          # continue-on-failure: false       # default: fail the job (and PR check) on any test failure
 
-      - name: Trigger mabl test run
-        id: trigger
-        run: |
-          AUTH=$(echo -n "key:${{ secrets.MABL_API_KEY }}" | base64 -w 0)
-          RESPONSE=$(curl -sf -X POST \
-            "https://api.mabl.com/events/deployment" \
-            -H "Authorization: Basic $AUTH" \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"environment_id\": \"${{ secrets.MABL_ENVIRONMENT_ID }}\",
-              \"application_id\": \"${{ secrets.MABL_APPLICATION_ID }}\",
-              \"plan_labels\": [{\"name\": \"ci\"}],
-              \"browser_types\": [\"chrome\"],
-              \"revision\": \"${{ github.sha }}\"
-            }")
-          echo "event_token=$(echo $RESPONSE | jq -r '.id // empty')" >> $GITHUB_OUTPUT
-
-      - name: Poll for test completion
-        id: poll
-        run: |
-          AUTH=$(echo -n "key:${{ secrets.MABL_API_KEY }}" | base64 -w 0)
-          # Poll every 30 s, up to 20 minutes
-          for i in $(seq 1 40); do
-            sleep 30
-            RESULT=$(curl -sf \
-              "https://api.mabl.com/execution/result/event/${{ steps.trigger.outputs.event_token }}" \
-              -H "Authorization: Basic $AUTH")
-            STATUS=$(echo $RESULT | jq -r '.status // empty')
-            echo "Poll $i — status: $STATUS"
-            if [[ "$STATUS" == "SUCCEEDED" || "$STATUS" == "FAILED" || "$STATUS" == "SKIPPED" ]]; then
-              echo "status=$STATUS" >> $GITHUB_OUTPUT
-              echo "results_url=$(echo $RESULT | jq -r '.mabl_branch_url // empty')" >> $GITHUB_OUTPUT
-              break
-            fi
-          done
-
-  # ── 3. File Jira issue + Slack alert on failure ────────────────────
+  # ── 4. Report failures → Jira (SUP) + Slack ───────────────────────
+  #     Only runs when the mabl E2E job failed. Demo tickets are clearly
+  #     marked and land in the Damien-approved SUP project.
   report-failure:
-    needs: test
-    if: needs.test.outputs.status == 'FAILED'
+    needs: e2e
+    if: failure()
     runs-on: ubuntu-latest
     steps:
-      - name: Create Jira issue
+      - name: Create Jira issue (SUP)
         run: |
           AUTH=$(echo -n "${{ secrets.JIRA_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" | base64 -w 0)
-          SUMMARY="Test failure: galaxy-explorer @ $(echo '${{ github.sha }}' | cut -c1-8)"
-          BODY="Automated mabl test suite failed after deploying to GitHub Pages.\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Actor:* ${{ github.actor }}\n*Workflow run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n*mabl results:* ${{ needs.test.outputs.results_url }}\n\n*Reproduction:*\nNavigate to https://ryan-cse.github.io/galaxy-explorer-demo?demo=true and execute the failing test steps."
+          SHA_SHORT=$(echo '${{ github.sha }}' | cut -c1-8)
+          SUMMARY="[Galaxy Explorer DEMO] mabl E2E failure @ ${SHA_SHORT}"
+          BODY="Automated mabl E2E suite failed after deploying to GitHub Pages.\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Actor:* ${{ github.actor }}\n*Workflow run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n*Reproduction:* open https://ryan-cse.github.io/galaxy-explorer-demo/?demo=true and run the 'Favorites only' flow."
           curl -sf -X POST \
             "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue" \
             -H "Authorization: Basic $AUTH" \
@@ -94,14 +98,10 @@ jobs:
                 \"project\": {\"key\": \"${{ secrets.JIRA_PROJECT_KEY }}\"},
                 \"summary\": \"$SUMMARY\",
                 \"issuetype\": {\"name\": \"Bug\"},
-                \"priority\": {\"name\": \"High\"},
-                \"labels\": [\"ci\", \"galaxy-explorer\", \"mabl\"],
+                \"labels\": [\"galaxy-explorer\", \"demo\", \"mabl\", \"ci\"],
                 \"description\": {
                   \"version\": 1, \"type\": \"doc\",
-                  \"content\": [{
-                    \"type\": \"paragraph\",
-                    \"content\": [{\"type\": \"text\", \"text\": \"$BODY\"}]
-                  }]
+                  \"content\": [{\"type\": \"paragraph\", \"content\": [{\"type\": \"text\", \"text\": \"$BODY\"}]}]
                 }
               }
             }"
@@ -112,14 +112,13 @@ jobs:
           curl -sf -X POST '${{ secrets.SLACK_WEBHOOK_URL }}' \
             -H 'Content-Type: application/json' \
             -d '{
-              "text": ":x: *Galaxy Explorer — test failure* (`'"$SHA_SHORT"'`)",
+              "text": ":x: *Galaxy Explorer — mabl E2E failure* (`'"$SHA_SHORT"'`)",
               "attachments": [{
                 "color": "danger",
                 "fields": [
                   {"title": "Branch", "value": "${{ github.ref_name }}", "short": true},
                   {"title": "Actor", "value": "${{ github.actor }}", "short": true},
-                  {"title": "GitHub Actions", "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>", "short": true},
-                  {"title": "mabl Results", "value": "<${{ needs.test.outputs.results_url }}|View in mabl>", "short": true}
+                  {"title": "GitHub Actions", "value": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>", "short": true}
                 ]
               }]
             }'
