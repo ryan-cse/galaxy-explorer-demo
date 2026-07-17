@@ -8,12 +8,14 @@
    ─────────────────────────────────────────────────────────────── */
 (function () {
   const { load, SCHEMA, cap, categories } = window.GalaxyData;
+  // Pure logic lives in lib.js (unit-tested in tests/lib.test.js).
+  const { num, shortNum, favKey, filterFavoritesOnly } = window.GalaxyLib;
   const PAGE_SIZE = 6;
   const FAV_KEY = 'galaxy.favorites';
 
   // Per-category UI state (search / sort / page) persists during the session.
   const ui = {};
-  categories.forEach((c) => { ui[c] = { q: '', sort: 'name-asc', page: 1 }; });
+  categories.forEach((c) => { ui[c] = { q: '', sort: 'name-asc', page: 1, favOnly: false }; });
 
   const cache = {};
   const planetNames = {};
@@ -62,7 +64,6 @@
     catch (e) { return []; }
   }
   function setFavs(arr) { localStorage.setItem(FAV_KEY, JSON.stringify(arr)); updateFavCount(); }
-  function favKey(cat, id) { return cat + ':' + id; }
   function isFav(cat, id) { return getFavs().some((f) => favKey(f.category, f.id) === favKey(cat, id)); }
   function toggleFav(cat, id, name, sub) {
     const favs = getFavs();
@@ -84,10 +85,6 @@
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
-  function num(v) {
-    const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
-    return isNaN(n) ? -Infinity : n;
   }
   function fmt(v) {
     if (v == null || v === '' || /^(unknown|n\/a|none|na)$/i.test(v)) return '—';
@@ -167,16 +164,6 @@
     return map[category].filter(([, v]) => v && !/unknown|n\/a/i.test(v)).map(([k, v]) =>
       `<span class="chip">${k} <b>${esc(fmt(v))}</b></span>`).join('');
   }
-  function shortNum(v) {
-    const n = num(v);
-    if (n === -Infinity) return v;
-    if (n >= 1e12) return (n / 1e12) + 'T';
-    if (n >= 1e9) return (n / 1e9) + 'B';
-    if (n >= 1e6) return (n / 1e6) + 'M';
-    if (n >= 1e3) return (n / 1e3) + 'K';
-    return String(n);
-  }
-
   // ── Renderers ──────────────────────────────────────────────────
   function skeleton() {
     let cards = '';
@@ -188,6 +175,25 @@
       </div>`;
     }
     return `<div class="grid" data-testid="loading">${cards}</div>`;
+  }
+
+  // Empty-state markup — distinguishes "favorites-only, none saved" from "no search match".
+  function emptyStateHTML(category) {
+    const sc = SCHEMA[category], s = ui[category];
+    if (s.favOnly) {
+      return `<div class="state" data-testid="favorites-only-empty">
+        <span class="material-symbols-rounded">favorite_border</span>
+        <h3>No favorited ${sc.label.toLowerCase()} yet</h3>
+        <p>Tap the heart on any ${sc.singular.toLowerCase()} to pin it here, or turn off “Favorites only”.</p>
+        <button class="btn btn-secondary" data-testid="clear-fav-only" onclick="GalaxyApp.toggleFavOnly(false)">Show all ${sc.label.toLowerCase()}</button>
+      </div>`;
+    }
+    return `<div class="state" data-testid="empty">
+      <span class="material-symbols-rounded">search_off</span>
+      <h3>No ${sc.label.toLowerCase()} match "${esc(s.q)}"</h3>
+      <p>Try a different search term, or clear the search to see everything.</p>
+      <button class="btn btn-secondary" data-testid="clear-search" onclick="GalaxyApp.search('')">Clear search</button>
+    </div>`;
   }
 
   async function renderBrowse(category) {
@@ -224,6 +230,12 @@
             ${SORTS[category].map(([v, l]) => `<option value="${v}" ${v === s.sort ? 'selected' : ''}>${l}</option>`).join('')}
           </select>
         </div>
+        <label class="fav-only ${s.favOnly ? 'on' : ''}" data-testid="favorites-only" title="Show only your favorited ${sc.label.toLowerCase()}">
+          <input type="checkbox" data-testid="favorites-only-toggle" ${s.favOnly ? 'checked' : ''}
+                 aria-label="Show favorites only" onchange="GalaxyApp.toggleFavOnly(this.checked)">
+          <span class="material-symbols-rounded">favorite</span>
+          <span>Favorites only</span>
+        </label>
         <span class="result-count" data-testid="result-meta"></span>
       </div>
       <div id="grid-region"></div>`;
@@ -241,7 +253,8 @@
     }
     if (parseRoute().category !== category || parseRoute().name !== 'browse') return;
 
-    const filtered = applyQuerySort(data.items, category);
+    let filtered = applyQuerySort(data.items, category);
+    filtered = filterFavoritesOnly(filtered, getFavs(), category, s.favOnly);
     const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     if (s.page > pages) s.page = pages;
     const start = (s.page - 1) * PAGE_SIZE;
@@ -251,12 +264,7 @@
     meta.innerHTML = `${filtered.length} ${filtered.length === 1 ? sc.singular.toLowerCase() : sc.label.toLowerCase()} &nbsp; ${sourcePill(data)}`;
 
     if (!filtered.length) {
-      region.innerHTML = `<div class="state" data-testid="empty">
-        <span class="material-symbols-rounded">search_off</span>
-        <h3>No ${sc.label.toLowerCase()} match "${esc(s.q)}"</h3>
-        <p>Try a different search term, or clear the search to see everything.</p>
-        <button class="btn btn-secondary" data-testid="clear-search" onclick="GalaxyApp.search('')">Clear search</button>
-      </div>`;
+      region.innerHTML = emptyStateHTML(category);
       return;
     }
 
@@ -468,6 +476,12 @@
     },
     setSort(v) { const c = parseRoute().category; ui[c].sort = v; ui[c].page = 1; rerenderGrid(c); },
     setPage(p) { const c = parseRoute().category; ui[c].page = p; rerenderGrid(c); },
+    toggleFavOnly(on) {
+      const c = parseRoute().category;
+      ui[c].favOnly = on == null ? !ui[c].favOnly : !!on;
+      ui[c].page = 1;
+      rerenderGrid(c);
+    },
     fav(btn, cat, id) {
       const card = btn.closest('.card');
       const name = card.querySelector('.card-title').textContent;
@@ -475,6 +489,8 @@
       btn.classList.toggle('on', on);
       btn.setAttribute('aria-pressed', on);
       btn.setAttribute('aria-label', on ? 'Remove from favorites' : 'Add to favorites');
+      // In "Favorites only" view, unfavoriting should drop the card immediately.
+      if (ui[parseRoute().category] && ui[parseRoute().category].favOnly) rerenderGrid(parseRoute().category);
     },
     favDetail(btn, cat, id) {
       const name = document.querySelector('[data-testid="detail-name"]').textContent;
@@ -494,7 +510,8 @@
     const data = cache[category];
     if (!data) return renderBrowse(category);
     const s = ui[category], sc = SCHEMA[category];
-    const filtered = applyQuerySort(data.items, category);
+    let filtered = applyQuerySort(data.items, category);
+    filtered = filterFavoritesOnly(filtered, getFavs(), category, s.favOnly);
     const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     if (s.page > pages) s.page = pages;
     const pageItems = filtered.slice((s.page - 1) * PAGE_SIZE, (s.page - 1) * PAGE_SIZE + PAGE_SIZE);
@@ -502,11 +519,7 @@
     const meta = document.querySelector('[data-testid="result-meta"]');
     if (meta) meta.innerHTML = `${filtered.length} ${filtered.length === 1 ? sc.singular.toLowerCase() : sc.label.toLowerCase()} &nbsp; ${sourcePill(data)}`;
     if (!filtered.length) {
-      region.innerHTML = `<div class="state" data-testid="empty">
-        <span class="material-symbols-rounded">search_off</span>
-        <h3>No ${sc.label.toLowerCase()} match "${esc(s.q)}"</h3>
-        <p>Try a different search term, or clear the search to see everything.</p>
-        <button class="btn btn-secondary" data-testid="clear-search" onclick="GalaxyApp.search('')">Clear search</button></div>`;
+      region.innerHTML = emptyStateHTML(category);
       return;
     }
     region.innerHTML = `<div class="grid" data-testid="results">${pageItems.map((it) => cardHTML(it, category)).join('')}</div>${pagerHTML(s.page, pages)}`;

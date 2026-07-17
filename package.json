@@ -1,0 +1,13 @@
+{
+  "name": "galaxy-explorer-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Galaxy Explorer — a Star Wars catalog demo app for mabl browser-test automation",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.9"
+  }
+}
