@@ -107,9 +107,13 @@ jobs:
             }"
 
       - name: Send Slack alert
+        # Auto-skips if no webhook secret is set, so missing Slack perms don't break the job.
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           SHA_SHORT=$(echo '${{ github.sha }}' | cut -c1-8)
-          curl -sf -X POST '${{ secrets.SLACK_WEBHOOK_URL }}' \
+          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
             -H 'Content-Type: application/json' \
             -d '{
               "text": ":x: *Galaxy Explorer — mabl E2E failure* (`'"$SHA_SHORT"'`)",
