@@ -1,6 +1,6 @@
 /* Unit tests for Galaxy Explorer pure logic (lib.js).
    Run with: npm test   (Vitest, globals enabled — no imports needed). */
-const { num, shortNum, favKey, filterFavoritesOnly } = require('../lib.js');
+const { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, COMPARE_MAX } = require('../lib.js');
 
 describe('num', () => {
   it('parses plain integers', () => {
@@ -73,5 +73,87 @@ describe('filterFavoritesOnly', () => {
   it('is safe when items or favs are missing', () => {
     expect(filterFavoritesOnly(undefined, favs, 'people', true)).toEqual([]);
     expect(filterFavoritesOnly(people, undefined, 'people', true)).toEqual([]);
+  });
+});
+
+describe('toggleCompare', () => {
+  it('adds an id to an empty selection', () => {
+    expect(toggleCompare([], '10', 3)).toEqual(['10']);
+  });
+
+  it('removes an id that is already selected', () => {
+    expect(toggleCompare(['10'], '10', 3)).toEqual([]);
+  });
+
+  it('appends new ids preserving selection order', () => {
+    expect(toggleCompare(['2', '3'], '10', 3)).toEqual(['2', '3', '10']);
+  });
+
+  it('enforces the cap — a 4th selection is ignored', () => {
+    expect(toggleCompare(['2', '3', '10'], '12', 3)).toEqual(['2', '3', '10']);
+  });
+
+  it('still allows removing an item when at the cap', () => {
+    expect(toggleCompare(['2', '3', '10'], '3', 3)).toEqual(['2', '10']);
+  });
+
+  it('defaults the cap to COMPARE_MAX when none is passed', () => {
+    expect(COMPARE_MAX).toBe(3);
+    const four = toggleCompare(['1', '2', '3'], '4');
+    expect(four).toEqual(['1', '2', '3']);
+  });
+
+  it('does not mutate the input array', () => {
+    const orig = ['2', '3'];
+    toggleCompare(orig, '10', 3);
+    expect(orig).toEqual(['2', '3']);
+  });
+
+  it('coerces ids to strings so numeric ids match', () => {
+    expect(toggleCompare([], 10, 3)).toEqual(['10']);
+    expect(toggleCompare(['10'], 10, 3)).toEqual([]);
+  });
+});
+
+describe('buildComparison', () => {
+  const ships = [
+    { id: '10', name: 'Millennium Falcon', starship_class: 'Light freighter', crew: '4', cost_in_credits: '100000' },
+    { id: '12', name: 'X-wing', starship_class: 'Starfighter', crew: '1', cost_in_credits: '149999' },
+    { id: '13', name: 'TIE Advanced x1', starship_class: 'Starfighter', crew: '1', cost_in_credits: 'unknown' },
+  ];
+  const fields = [['starship_class', 'Class'], ['crew', 'Crew'], ['cost_in_credits', 'Cost', 'credits']];
+
+  it('builds one column per selected id, in selection order', () => {
+    const m = buildComparison(ships, ['12', '10'], fields);
+    expect(m.columns).toEqual([
+      { id: '12', name: 'X-wing' },
+      { id: '10', name: 'Millennium Falcon' },
+    ]);
+  });
+
+  it('builds one row per field with values aligned to the columns', () => {
+    const m = buildComparison(ships, ['12', '10'], fields);
+    expect(m.rows[0]).toEqual({ key: 'starship_class', label: 'Class', unit: '', values: ['Starfighter', 'Light freighter'] });
+    expect(m.rows[2]).toEqual({ key: 'cost_in_credits', label: 'Cost', unit: 'credits', values: ['149999', '100000'] });
+  });
+
+  it('passes through non-empty values (e.g. "unknown") as raw — the UI formats them', () => {
+    const m = buildComparison(ships, ['13'], [['cost_in_credits', 'Cost', 'credits']]);
+    expect(m.rows[0].values).toEqual(['unknown']);
+  });
+
+  it('maps missing / empty fields to null', () => {
+    const m = buildComparison(ships, ['12'], [['passengers', 'Passengers']]);
+    expect(m.rows[0].values).toEqual([null]);
+  });
+
+  it('skips selected ids that are not present in the item list', () => {
+    const m = buildComparison(ships, ['999', '10'], fields);
+    expect(m.columns).toEqual([{ id: '10', name: 'Millennium Falcon' }]);
+  });
+
+  it('is safe with empty / missing inputs', () => {
+    expect(buildComparison([], [], [])).toEqual({ columns: [], rows: [] });
+    expect(buildComparison(undefined, undefined, undefined)).toEqual({ columns: [], rows: [] });
   });
 });

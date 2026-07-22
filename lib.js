@@ -16,6 +16,9 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  // Maximum number of items that can be compared side by side at once.
+  const COMPARE_MAX = 3;
+
   // Parse a numeric-ish string ("1,000", "172 cm") to a Number.
   // Non-numeric / unknown values sort last, so they map to -Infinity.
   function num(v) {
@@ -49,5 +52,50 @@
     return (items || []).filter((it) => favSet.has(favKey(category, it.id)));
   }
 
-  return { num, shortNum, favKey, filterFavoritesOnly };
+  // Feature: "Compare starships" — selection state.
+  // Toggle an id in the compare selection, preserving selection order and
+  // enforcing a hard cap. Pure: returns a NEW array, never mutates input.
+  //   • already selected      → removed
+  //   • not selected, < cap    → appended
+  //   • not selected, at cap   → returned unchanged (4th selection prevented)
+  function toggleCompare(selected, id, max) {
+    const cap = max == null ? COMPARE_MAX : max;
+    const key = String(id);
+    const list = (selected || []).map(String);
+    const i = list.indexOf(key);
+    if (i >= 0) { list.splice(i, 1); return list; }
+    if (list.length >= cap) return list; // cap reached — ignore the new selection
+    list.push(key);
+    return list;
+  }
+
+  // Feature: "Compare starships" — table model.
+  // Build a side-by-side comparison from the item list + selected ids.
+  // Returns { columns, rows }:
+  //   columns = [{ id, name }]                 one per selected ship, in selection order
+  //   rows    = [{ key, label, unit, values }] values aligned to columns; missing → null
+  // Selected ids not present in `items` are skipped. `fields` is [[key, label, unit?]].
+  function buildComparison(items, selectedIds, fields) {
+    const byId = {};
+    (items || []).forEach((it) => { byId[String(it.id)] = it; });
+    const columns = (selectedIds || [])
+      .map((id) => byId[String(id)])
+      .filter(Boolean)
+      .map((it) => ({ id: String(it.id), name: it.name }));
+    const rows = (fields || []).map((f) => {
+      const key = f[0], label = f[1], unit = f[2] || '';
+      return {
+        key: key,
+        label: label,
+        unit: unit,
+        values: columns.map((col) => {
+          const v = byId[col.id][key];
+          return (v == null || v === '') ? null : v;
+        }),
+      };
+    });
+    return { columns: columns, rows: rows };
+  }
+
+  return { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, COMPARE_MAX };
 });

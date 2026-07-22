@@ -9,9 +9,20 @@
 (function () {
   const { load, SCHEMA, cap, categories } = window.GalaxyData;
   // Pure logic lives in lib.js (unit-tested in tests/lib.test.js).
-  const { num, shortNum, favKey, filterFavoritesOnly } = window.GalaxyLib;
+  const { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, COMPARE_MAX } = window.GalaxyLib;
   const PAGE_SIZE = 6;
   const FAV_KEY = 'galaxy.favorites';
+
+  // Compare tray (starships only) — session state, intentionally NOT persisted.
+  // Spec rows shown in the side-by-side table, in order.
+  const COMPARE_FIELDS = [
+    ['starship_class', 'Class'], ['crew', 'Crew'], ['passengers', 'Passengers'],
+    ['cost_in_credits', 'Cost', 'credits'], ['hyperdrive_rating', 'Hyperdrive'],
+    ['max_atmosphering_speed', 'Max speed'],
+  ];
+  let compareIds = [];        // selected starship ids, in selection order
+  let compareIsOpen = false;  // whether the comparison table is expanded
+  function isComparing(id) { return compareIds.indexOf(String(id)) >= 0; }
 
   // Per-category UI state (search / sort / page) persists during the session.
   const ui = {};
@@ -152,7 +163,26 @@
           </div>
         </div>
         <div class="card-meta">${chips}</div>
+        ${compareControlHTML(item, category)}
       </article>`;
+  }
+
+  // Compare toggle — only on starship cards. Disabled for unselected cards
+  // once the selection cap is reached (a 4th ship cannot be added).
+  function compareControlHTML(item, category) {
+    if (category !== 'starships') return '';
+    const on = isComparing(item.id);
+    const capped = !on && compareIds.length >= COMPARE_MAX;
+    return `<div class="card-actions">
+        <button class="compare-btn ${on ? 'on' : ''}" data-testid="compare-toggle" data-id="${esc(item.id)}"
+                aria-pressed="${on}" ${capped ? 'disabled' : ''}
+                aria-label="${on ? 'Remove from comparison' : 'Add to comparison'}"
+                title="${capped ? 'Maximum of ' + COMPARE_MAX + ' starships selected' : (on ? 'Remove from comparison' : 'Add to comparison')}"
+                onclick="event.stopPropagation();GalaxyApp.compareToggle('${esc(item.id)}')">
+          <span class="material-symbols-rounded">${on ? 'check_circle' : 'balance'}</span>
+          <span>${on ? 'Comparing' : 'Compare'}</span>
+        </button>
+      </div>`;
   }
 
   function chipFor(item, category) {
@@ -238,6 +268,7 @@
         </label>
         <span class="result-count" data-testid="result-meta"></span>
       </div>
+      ${category === 'starships' ? '<div id="compare-region" data-testid="compare-region" hidden></div>' : ''}
       <div id="grid-region"></div>`;
 
     view.innerHTML = toolbar;
@@ -262,6 +293,8 @@
 
     const meta = document.querySelector('[data-testid="result-meta"]');
     meta.innerHTML = `${filtered.length} ${filtered.length === 1 ? sc.singular.toLowerCase() : sc.label.toLowerCase()} &nbsp; ${sourcePill(data)}`;
+
+    if (category === 'starships') renderCompareBar();
 
     if (!filtered.length) {
       region.innerHTML = emptyStateHTML(category);
@@ -503,6 +536,27 @@
       btn.querySelector('[data-testid="detail-fav-label"]').textContent = on ? 'Saved' : 'Add to favorites';
     },
     favFromList(btn, cat, id) { toggleFav(cat, id); renderFavorites(); },
+
+    // ── Compare tray (starships) ─────────────────────────────────
+    compareToggle(id) {
+      compareIds = toggleCompare(compareIds, String(id), COMPARE_MAX);
+      if (compareIds.length < 2) compareIsOpen = false; // nothing to compare below 2
+      rerenderGrid('starships'); // refresh card on/disabled states
+      renderCompareBar();
+    },
+    compareClear() {
+      compareIds = [];
+      compareIsOpen = false;
+      rerenderGrid('starships');
+      renderCompareBar();
+    },
+    compareOpen() {
+      if (compareIds.length < 2) return;
+      compareIsOpen = true;
+      renderCompareBar();
+      const t = document.querySelector('[data-testid="compare-table"]');
+      if (t) t.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    },
   };
 
   function rerenderGrid(category) {
@@ -523,6 +577,55 @@
       return;
     }
     region.innerHTML = `<div class="grid" data-testid="results">${pageItems.map((it) => cardHTML(it, category)).join('')}</div>${pagerHTML(s.page, pages)}`;
+  }
+
+  // ── Compare tray rendering (lives in #compare-region, above the grid) ──
+  function renderCompareBar() {
+    const el = document.getElementById('compare-region');
+    if (!el) return;
+    if (!compareIds.length) { el.innerHTML = ''; el.hidden = true; compareIsOpen = false; return; }
+    el.hidden = false;
+    const data = cache['starships'];
+    const nameFor = (id) => {
+      const it = data && data.items.find((x) => String(x.id) === String(id));
+      return it ? it.name : id;
+    };
+    const names = compareIds.map(nameFor).map(esc).join(' · ');
+    const full = compareIds.length >= COMPARE_MAX;
+    const canOpen = compareIds.length >= 2;
+    el.innerHTML = `
+      <div class="compare-bar" data-testid="compare-bar">
+        <span class="compare-bar-count" data-testid="compare-count">${compareIds.length}</span>
+        <span class="compare-bar-names" data-testid="compare-names">${names}</span>
+        <span class="compare-bar-hint">${full ? 'Maximum of ' + COMPARE_MAX + ' selected' : 'Select up to ' + COMPARE_MAX + ' to compare'}</span>
+        <span class="spacer"></span>
+        <button class="btn btn-secondary btn-sm" data-testid="compare-clear" onclick="GalaxyApp.compareClear()">Clear</button>
+        <button class="btn btn-primary btn-sm" data-testid="compare-open" ${canOpen ? '' : 'disabled'}
+                title="${canOpen ? '' : 'Select at least 2 starships to compare'}" onclick="GalaxyApp.compareOpen()">
+          <span class="material-symbols-rounded">balance</span>Compare ${compareIds.length}
+        </button>
+      </div>
+      ${compareIsOpen && canOpen ? compareTableHTML() : ''}`;
+  }
+
+  function compareTableHTML() {
+    const data = cache['starships'];
+    if (!data) return '';
+    const model = buildComparison(data.items, compareIds, COMPARE_FIELDS);
+    if (model.columns.length < 2) return '';
+    const head = model.columns.map((c) =>
+      `<th scope="col" data-testid="compare-col" data-id="${esc(c.id)}">${esc(c.name)}</th>`).join('');
+    const rows = model.rows.map((r) => {
+      const cells = r.values.map((v) =>
+        `<td>${v == null ? '—' : esc(fmt(v))}${(r.unit && v != null) ? ` <span class="unit">${esc(r.unit)}</span>` : ''}</td>`).join('');
+      return `<tr data-testid="compare-row" data-field="${r.key}"><th scope="row">${esc(r.label)}</th>${cells}</tr>`;
+    }).join('');
+    return `<div class="compare-table-wrap">
+        <table class="compare-table" data-testid="compare-table">
+          <thead><tr><th scope="col"></th>${head}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
   }
 
   // Live "Galactic Standard Time" clock (UTC). The datetime attr is ISO-formatted
