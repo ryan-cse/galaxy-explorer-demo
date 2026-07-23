@@ -97,5 +97,25 @@
     return { columns: columns, rows: rows };
   }
 
-  return { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, COMPARE_MAX };
+  // Feature: hash-based router — parse a location hash into a route descriptor.
+  // Pure + framework-free so it can be unit-tested and reused by the app.
+  //   '' | '#' | '#/' | '#/home'   → { name: 'home' }
+  //   '#/browse/:category'         → { name: 'browse', category }   (defaults to 'people')
+  //   '#/item/:category/:id'       → { name: 'item', category, id }
+  //   '#/favorites'                → { name: 'favorites' }
+  //   '#/signin'                   → { name: 'signin' }
+  // Empty and unrecognised hashes fall back to Home, so the base URL lands on a
+  // neutral welcome page instead of dropping straight into a category catalog.
+  function parseHashRoute(hash) {
+    const h = String(hash == null ? '' : hash).replace(/^#\/?/, '');
+    const parts = h.split('/').filter(Boolean);
+    if (!parts.length || parts[0] === 'home') return { name: 'home' };
+    if (parts[0] === 'browse') return { name: 'browse', category: parts[1] || 'people' };
+    if (parts[0] === 'item') return { name: 'item', category: parts[1], id: parts[2] };
+    if (parts[0] === 'favorites') return { name: 'favorites' };
+    if (parts[0] === 'signin') return { name: 'signin' };
+    return { name: 'home' };
+  }
+
+  return { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, parseHashRoute, COMPARE_MAX };
 });

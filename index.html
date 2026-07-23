@@ -13,7 +13,7 @@
 <body>
 <div class="app">
   <header class="topbar">
-    <button class="brand" data-testid="brand-home" onclick="GalaxyApp.go('#/browse/people')" aria-label="Galaxy Explorer home">
+    <button class="brand" data-testid="brand-home" onclick="GalaxyApp.go('#/home')" aria-label="Galaxy Explorer home">
       <span class="logo" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 3.2a6.8 6.8 0 0 1 6.6 5.2 9.3 9.3 0 0 0-3.3-.9c-2.2-.2-3.6.4-4.8 1-1 .5-1.8.9-3.2.8a3.7 3.7 0 0 1-1.1-.2A6.8 6.8 0 0 1 12 5.2Zm0 13.6a6.8 6.8 0 0 1-6.6-5.2c1 .5 2.1.8 3.4.9 2.2.1 3.5-.5 4.7-1.1 1-.5 1.9-.9 3.3-.8.4 0 .8.1 1.1.2A6.8 6.8 0 0 1 12 18.8Z" fill="currentColor"></path>
@@ -24,6 +24,7 @@
     </button>
 
     <nav class="topnav" data-testid="primary-nav" aria-label="Categories">
+      <button data-nav="home" data-testid="nav-home" onclick="GalaxyApp.go('#/home')">Home</button>
       <button data-nav="people" data-testid="nav-people" onclick="GalaxyApp.go('#/browse/people')">Characters</button>
       <button data-nav="planets" data-testid="nav-planets" onclick="GalaxyApp.go('#/browse/planets')">Planets</button>
       <button data-nav="starships" data-testid="nav-starships" onclick="GalaxyApp.go('#/browse/starships')">Starships</button>

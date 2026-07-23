@@ -1,6 +1,6 @@
 /* Unit tests for Galaxy Explorer pure logic (lib.js).
    Run with: npm test   (Vitest, globals enabled — no imports needed). */
-const { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, COMPARE_MAX } = require('../lib.js');
+const { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, parseHashRoute, COMPARE_MAX } = require('../lib.js');
 
 describe('num', () => {
   it('parses plain integers', () => {
@@ -155,5 +155,44 @@ describe('buildComparison', () => {
   it('is safe with empty / missing inputs', () => {
     expect(buildComparison([], [], [])).toEqual({ columns: [], rows: [] });
     expect(buildComparison(undefined, undefined, undefined)).toEqual({ columns: [], rows: [] });
+  });
+});
+
+describe('parseHashRoute', () => {
+  it('routes the base URL (empty / missing hash) to Home, not a category', () => {
+    expect(parseHashRoute('')).toEqual({ name: 'home' });
+    expect(parseHashRoute(null)).toEqual({ name: 'home' });
+    expect(parseHashRoute(undefined)).toEqual({ name: 'home' });
+    expect(parseHashRoute('#')).toEqual({ name: 'home' });
+    expect(parseHashRoute('#/')).toEqual({ name: 'home' });
+  });
+
+  it('routes #/home to Home', () => {
+    expect(parseHashRoute('#/home')).toEqual({ name: 'home' });
+  });
+
+  it('routes #/browse/:category to browse with that category', () => {
+    expect(parseHashRoute('#/browse/people')).toEqual({ name: 'browse', category: 'people' });
+    expect(parseHashRoute('#/browse/planets')).toEqual({ name: 'browse', category: 'planets' });
+    expect(parseHashRoute('#/browse/starships')).toEqual({ name: 'browse', category: 'starships' });
+  });
+
+  it('defaults a bare #/browse to people', () => {
+    expect(parseHashRoute('#/browse')).toEqual({ name: 'browse', category: 'people' });
+  });
+
+  it('routes #/item/:category/:id to a detail view', () => {
+    expect(parseHashRoute('#/item/people/1')).toEqual({ name: 'item', category: 'people', id: '1' });
+    expect(parseHashRoute('#/item/starships/10')).toEqual({ name: 'item', category: 'starships', id: '10' });
+  });
+
+  it('routes #/favorites and #/signin unchanged', () => {
+    expect(parseHashRoute('#/favorites')).toEqual({ name: 'favorites' });
+    expect(parseHashRoute('#/signin')).toEqual({ name: 'signin' });
+  });
+
+  it('falls back to Home for unrecognised routes', () => {
+    expect(parseHashRoute('#/nope')).toEqual({ name: 'home' });
+    expect(parseHashRoute('#/garbage/path')).toEqual({ name: 'home' });
   });
 });
