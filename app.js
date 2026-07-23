@@ -1,6 +1,7 @@
 /* ───────────────────────────────────────────────────────────────
    Galaxy Explorer — app logic (vanilla JS, hash-routed)
    Routes:
+     #/home  (also '' / #/)    landing page (welcome banner + category cards)
      #/browse/:category        catalog grid (search · sort · paginate)
      #/item/:category/:id      detail view
      #/favorites               saved items
@@ -9,7 +10,7 @@
 (function () {
   const { load, SCHEMA, cap, categories } = window.GalaxyData;
   // Pure logic lives in lib.js (unit-tested in tests/lib.test.js).
-  const { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, COMPARE_MAX } = window.GalaxyLib;
+  const { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, parseHashRoute, COMPARE_MAX } = window.GalaxyLib;
   const PAGE_SIZE = 6;
   const FAV_KEY = 'galaxy.favorites';
 
@@ -224,6 +225,37 @@
       <p>Try a different search term, or clear the search to see everything.</p>
       <button class="btn btn-secondary" data-testid="clear-search" onclick="GalaxyApp.search('')">Clear search</button>
     </div>`;
+  }
+
+  // ── Home landing page ──────────────────────────────────────────
+  // Neutral welcome screen shown at the base URL ('' / #/ / #/home). Gives a
+  // stable entry point so deployment/plan runs don't land straight on a
+  // category catalog — tests navigate into the category they actually want.
+  function renderHome() {
+    setActiveNav('home');
+    const favCount = getFavs().length;
+    const cards = categories.map((c) => {
+      const sc = SCHEMA[c];
+      return `<button class="home-card" data-testid="home-card-${c}" onclick="GalaxyApp.go('#/browse/${c}')">
+          <span class="home-card-icon"><span class="material-symbols-rounded">${sc.icon}</span></span>
+          <span class="home-card-title">${sc.label}</span>
+          <span class="home-card-sub">Browse ${sc.label.toLowerCase()}</span>
+        </button>`;
+    }).join('');
+    view.innerHTML = `
+      <section class="home-hero" data-testid="home-welcome">
+        <div class="eyebrow">Welcome to</div>
+        <h1 class="home-title" data-testid="home-title">Galaxy<span class="accent">Explorer</span></h1>
+        <p class="home-lede" data-testid="home-welcome-message">Your gateway to the Star Wars galaxy. Browse characters, planets, and starships, save your favorites, and dive into the details — a sample app for practising browser-test automation with mabl.</p>
+        <div class="home-cta">
+          <button class="btn btn-primary" data-testid="home-start" onclick="GalaxyApp.go('#/browse/people')">Start exploring</button>
+          <button class="btn btn-text" data-testid="home-favorites-link" onclick="GalaxyApp.go('#/favorites')">
+            <span class="material-symbols-rounded">favorite</span>
+            View your favorites${favCount ? ` (${favCount})` : ''}
+          </button>
+        </div>
+      </section>
+      <div class="home-cards" data-testid="home-cards">${cards}</div>`;
   }
 
   async function renderBrowse(category) {
@@ -479,17 +511,15 @@
   }
 
   // ── Router ─────────────────────────────────────────────────────
+  // Parsing lives in lib.js (parseHashRoute) so it can be unit-tested; this
+  // wrapper just feeds it the live location hash.
   function parseRoute() {
-    const h = (location.hash || '#/browse/people').replace(/^#\/?/, '');
-    const parts = h.split('/').filter(Boolean);
-    if (parts[0] === 'item') return { name: 'item', category: parts[1], id: parts[2] };
-    if (parts[0] === 'favorites') return { name: 'favorites' };
-    if (parts[0] === 'signin') return { name: 'signin' };
-    return { name: 'browse', category: parts[1] || 'people' };
+    return parseHashRoute(location.hash);
   }
   function route() {
     const r = parseRoute();
     window.scrollTo(0, 0);
+    if (r.name === 'home') return renderHome();
     if (r.name === 'item') return renderDetail(r.category, r.id);
     if (r.name === 'favorites') return renderFavorites();
     if (r.name === 'signin') return renderSignin();
