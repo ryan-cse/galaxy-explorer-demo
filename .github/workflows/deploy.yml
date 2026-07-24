@@ -72,6 +72,7 @@ jobs:
           application-id: ${{ secrets.MABL_APPLICATION_ID }}
           environment-id: ${{ secrets.MABL_ENVIRONMENT_ID }}
           plan-labels: ci
+          app-url: https://ryan-cse.github.io/galaxy-explorer-demo/?demo=true
           # browser-types: chrome            # optional override
           # continue-on-failure: false       # default: fail the job (and PR check) on any test failure
 
