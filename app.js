@@ -537,7 +537,7 @@
       rerenderGrid(c);
       if (focused) { const ni = document.querySelector('[data-testid="search-input"]'); ni.focus(); ni.setSelectionRange(ni.value.length, ni.value.length); }
     },
-    setSort(v) { const c = parseRoute().category; ui[c].sort = v; ui[c].page = 1; rerenderGrid(c); },
+    setSort(v) { const c = parseRoute().category; ui[c].sort = v; rerenderGrid(c); },
     setPage(p) { const c = parseRoute().category; ui[c].page = p; rerenderGrid(c); },
     toggleFavOnly(on) {
       const c = parseRoute().category;
