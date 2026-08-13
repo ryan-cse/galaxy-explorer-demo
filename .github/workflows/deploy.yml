@@ -63,15 +63,35 @@ jobs:
           ref: demo-regression
           path: regression
 
-      - name: Verify regression build is present
+      # Writes what actually got packaged into the published site itself, so the
+      # deploy can be verified by fetching a URL rather than by reading run logs.
+      # Filename deliberately has NO leading underscore — Jekyll excludes those.
+      - name: Write deploy manifest
         shell: bash
         run: |
-          echo "--- workspace root ---"
-          ls -la
-          echo "--- regression/ ---"
-          ls -la regression || echo "MISSING: regression directory does not exist"
-          echo "--- setSort in regression/app.js (expect NO 'page = 1') ---"
-          grep -n "setSort(v)" regression/app.js || echo "MISSING: regression/app.js not found"
+          {
+            echo "commit:  ${{ github.sha }}"
+            echo "run:     ${{ github.run_id }}"
+            echo "built:   $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo
+            echo "--- top-level entries ---"
+            ls -1
+            echo
+            echo "--- regression/ present? ---"
+            if [ -d regression ]; then
+              echo "YES"
+              ls -1 regression
+              echo
+              echo "--- regression/app.js setSort (expect NO 'page = 1') ---"
+              grep -n 'setSort(v)' regression/app.js || echo "regression/app.js NOT FOUND"
+            else
+              echo "NO - regression directory is missing from the workspace"
+            fi
+            echo
+            echo "--- main app.js setSort (expect 'page = 1') ---"
+            grep -n 'setSort(v)' app.js
+          } > deploy-manifest.txt
+          cat deploy-manifest.txt
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
