@@ -46,6 +46,22 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+
+      # Publish the deliberately-broken `demo-regression` branch alongside the main
+      # build, at /regression/. This gives the CSE triage demo a stable, publicly
+      # reachable FAILING target so a dedicated mabl environment can point at it —
+      # without ever repointing the shared prod environment URL that every other
+      # demo type depends on.
+      #
+      # continue-on-error: the main site must deploy even if this checkout fails.
+      # Degraded state = /regression/ 404s, which breaks only the triage demo.
+      - name: Check out regression build
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          ref: demo-regression
+          path: regression
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
