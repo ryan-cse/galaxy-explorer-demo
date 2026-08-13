@@ -53,14 +53,25 @@ jobs:
       # without ever repointing the shared prod environment URL that every other
       # demo type depends on.
       #
-      # continue-on-error: the main site must deploy even if this checkout fails.
-      # Degraded state = /regression/ 404s, which breaks only the triage demo.
+      # NOTE: deliberately NOT continue-on-error. That flag reports a failed step's
+      # conclusion as "success" in the API, which hides real breakage. A failed deploy
+      # job simply leaves the previous Pages deployment live, so the site is protected
+      # either way — surfacing the failure is strictly better.
       - name: Check out regression build
-        continue-on-error: true
         uses: actions/checkout@v4
         with:
           ref: demo-regression
           path: regression
+
+      - name: Verify regression build is present
+        shell: bash
+        run: |
+          echo "--- workspace root ---"
+          ls -la
+          echo "--- regression/ ---"
+          ls -la regression || echo "MISSING: regression directory does not exist"
+          echo "--- setSort in regression/app.js (expect NO 'page = 1') ---"
+          grep -n "setSort(v)" regression/app.js || echo "MISSING: regression/app.js not found"
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
