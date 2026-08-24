@@ -1,0 +1,167 @@
+name: PR preview — deploy /preview/ → mabl E2E
+
+# Publishes the PR head to /preview/ on the same GitHub Pages site — alongside the
+# main build at / and the regression build at /regression/ — then runs mabl against
+# the dedicated "demo | preview" environment, so a verdict lands on the PR before
+# anyone merges.
+#
+# WHY THE WHOLE SITE IS REPACKAGED HERE:
+#   actions/deploy-pages publishes ONE artifact for the entire site. A preview deploy
+#   that shipped only /preview/ would DELETE the prod root and /regression/ — the two
+#   URLs every other demo type depends on. So this job checks out main at the root and
+#   demo-regression at /regression/, exactly as deploy.yml does, and adds the PR head
+#   at /preview/. A preview deploy therefore leaves prod content byte-identical.
+#
+# Companion to deploy.yml. See docs/MABL-AGENTIC-CICD-SETUP.md.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Shared with deploy.yml so main deploys and preview deploys QUEUE instead of racing.
+# GitHub Pages accepts one deployment at a time; without a shared group the two
+# workflows can collide and one of them fails for no good reason.
+concurrency:
+  group: pages-site
+  cancel-in-progress: false
+
+jobs:
+  # ── 1. Unit gate — runs for every PR, forks included (needs no secrets) ──
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
+
+  # ── 2. Publish main + regression + PR head to Pages ─────────────────────
+  deploy-preview:
+    needs: unit-test
+    # Fork PRs receive no secrets, so the mabl run could never authenticate.
+    # Skip cleanly rather than failing in a way that looks like a real problem.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    outputs:
+      preview-url: ${{ steps.url.outputs.preview }}
+    steps:
+      # (a) main at the site root — keeps the shared prod URL unchanged
+      - name: Check out main (site root)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # (b) the deliberately-broken build at /regression/ — the triage demo needs it
+      - name: Check out regression build
+        uses: actions/checkout@v4
+        with:
+          ref: demo-regression
+          path: regression
+
+      # (c) the PR head at /preview/ — the reason this workflow exists
+      - name: Check out PR head (preview)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: preview
+
+      # Fail loudly and BEFORE publishing if either subpath is missing. Shipping a
+      # partial artifact is how you silently take down a URL another demo relies on.
+      - name: Verify all three builds are staged
+        shell: bash
+        run: |
+          missing=0
+          for d in regression preview; do
+            if [ -d "$d" ]; then
+              echo "ok:      $d/ present"
+            else
+              echo "MISSING: $d/ — refusing to publish a partial site"
+              missing=1
+            fi
+          done
+          if [ ! -f index.html ]; then
+            echo "MISSING: index.html at site root — refusing to publish"
+            missing=1
+          fi
+          [ "$missing" -eq 0 ] || exit 1
+
+      # Written into the published site so a deploy can be verified by fetching a
+      # URL rather than by reading run logs. No leading underscore — Jekyll drops those.
+      - name: Write deploy manifest
+        shell: bash
+        run: |
+          {
+            echo "source:   pull_request #${{ github.event.pull_request.number }}"
+            echo "pr-head:  ${{ github.event.pull_request.head.sha }}"
+            echo "pr-title: ${{ github.event.pull_request.title }}"
+            echo "run:      ${{ github.run_id }}"
+            echo "built:    $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo
+            echo "--- top-level entries ---"
+            ls -1
+            echo
+            echo "--- root app.js setSort (expect 'page = 1' — main is healthy) ---"
+            grep -n 'setSort(v)' app.js || echo "app.js NOT FOUND"
+            echo
+            echo "--- regression/app.js setSort (expect NO 'page = 1') ---"
+            grep -n 'setSort(v)' regression/app.js || echo "regression/app.js NOT FOUND"
+          } > deploy-manifest.txt
+          cat deploy-manifest.txt
+
+      - name: Compute preview URL
+        id: url
+        shell: bash
+        run: |
+          echo "preview=https://ryan-cse.github.io/galaxy-explorer-demo/preview/?demo=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ── 3. mabl E2E against the preview, reported on the PR ─────────────────
+  #     Uses plan-labels "pr-preview" — deliberately NOT "ci", which belongs to
+  #     exactly one plan and is CASE-SENSITIVE. A plan only runs if it matches
+  #     app + environment + label, is active, has >=1 enabled test, AND has its
+  #     deployment trigger toggled ON (that toggle is UI-only).
+  e2e-preview:
+    needs: deploy-preview
+    runs-on: ubuntu-latest
+    steps:
+      # Lets the workflow land and be reviewable before the secret exists, instead
+      # of every PR going red on a missing value.
+      - name: Check preview environment is configured
+        id: guard
+        shell: bash
+        env:
+          PREVIEW_ENV: ${{ secrets.MABL_PREVIEW_ENVIRONMENT_ID }}
+        run: |
+          if [ -z "$PREVIEW_ENV" ]; then
+            echo "::warning title=Preview run skipped::MABL_PREVIEW_ENVIRONMENT_ID is not set. The /preview/ build was published, but no mabl run was triggered."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run mabl tests against the preview
+        if: steps.guard.outputs.configured == 'true'
+        uses: mablhq/github-run-tests-action@v1.16
+        env:
+          MABL_API_KEY: ${{ secrets.MABL_API_KEY }}   # MUST be a "CI/CD integration" key type
+        with:
+          application-id: ${{ secrets.MABL_APPLICATION_ID }}
+          environment-id: ${{ secrets.MABL_PREVIEW_ENVIRONMENT_ID }}
+          plan-labels: pr-preview
+          app-url: ${{ needs.deploy-preview.outputs.preview-url }}
