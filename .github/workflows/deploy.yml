@@ -19,8 +19,11 @@ permissions:
   pages: write
   id-token: write
 
+# Shared with preview.yml so main deploys and PR-preview deploys QUEUE rather than
+# race. GitHub Pages accepts one deployment at a time; a per-ref group lets the two
+# workflows collide and fails one of them for no good reason.
 concurrency:
-  group: pages-${{ github.ref }}
+  group: pages-site
   cancel-in-progress: false
 
 jobs:
