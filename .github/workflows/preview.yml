@@ -14,9 +14,22 @@ name: PR preview — deploy /preview/ → mabl E2E
 #
 # Companion to deploy.yml. See docs/MABL-AGENTIC-CICD-SETUP.md.
 
+# TRIGGER IS `push`, NOT `pull_request` — AND THAT IS DELIBERATE.
+#   Deployment branch policies on a protected environment are evaluated against
+#   github.ref. On a pull_request event that ref is the MERGE ref
+#   (refs/pull/<n>/merge), which is not a branch, so it can never match a branch
+#   pattern. The job is rejected before its first step with:
+#     Branch "refs/pull/8/merge" is not allowed to deploy to github-pages
+#   Triggering on push makes the ref refs/heads/<branch>, which matches ci/*.
+#   The mabl verdict still lands on the PR: the Action passes github.sha, and the
+#   mabl check is keyed to the commit, so it surfaces on any PR containing it.
+#   `main` is deliberately absent here — deploy.yml owns main.
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches:
+      - 'ci/*'
+      - 'feature/*'
+      - 'preview/*'
 
 permissions:
   contents: read
@@ -46,9 +59,6 @@ jobs:
   # ── 2. Publish main + regression + PR head to Pages ─────────────────────
   deploy-preview:
     needs: unit-test
-    # Fork PRs receive no secrets, so the mabl run could never authenticate.
-    # Skip cleanly rather than failing in a way that looks like a real problem.
-    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -72,7 +82,7 @@ jobs:
       - name: Check out PR head (preview)
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.sha }}
           path: preview
 
       # Fail loudly and BEFORE publishing if either subpath is missing. Shipping a
@@ -101,9 +111,8 @@ jobs:
         shell: bash
         run: |
           {
-            echo "source:   pull_request #${{ github.event.pull_request.number }}"
-            echo "pr-head:  ${{ github.event.pull_request.head.sha }}"
-            echo "pr-title: ${{ github.event.pull_request.title }}"
+            echo "source:   push to ${{ github.ref_name }}"
+            echo "commit:   ${{ github.sha }}"
             echo "run:      ${{ github.run_id }}"
             echo "built:    $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo
