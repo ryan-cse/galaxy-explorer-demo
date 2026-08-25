@@ -66,6 +66,15 @@ jobs:
           ref: demo-regression
           path: regression
 
+      # Also publish the qa-loop's multi-defect build at /qa-triage/. Staged here as
+      # well as in preview.yml because deploy-pages replaces the WHOLE site: a push to
+      # main that omitted it would silently delete the path the qa-loop demo runs on.
+      - name: Check out qa-triage build
+        uses: actions/checkout@v4
+        with:
+          ref: demo-qa-triage
+          path: qa-triage
+
       # Writes what actually got packaged into the published site itself, so the
       # deploy can be verified by fetching a URL rather than by reading run logs.
       # Filename deliberately has NO leading underscore — Jekyll excludes those.
@@ -87,6 +96,9 @@ jobs:
               echo
               echo "--- regression/app.js setSort (expect NO 'page = 1') ---"
               grep -n 'setSort(v)' regression/app.js || echo "regression/app.js NOT FOUND"
+              echo
+              echo "--- qa-triage/ present? ---"
+              if [ -d qa-triage ]; then echo "YES"; else echo "NO - MISSING"; fi
             else
               echo "NO - regression directory is missing from the workspace"
             fi

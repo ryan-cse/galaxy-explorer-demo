@@ -78,7 +78,15 @@ jobs:
           ref: demo-regression
           path: regression
 
-      # (c) the PR head at /preview/ — the reason this workflow exists
+      # (c) the qa-loop's multi-defect build at /qa-triage/ — three distinguishable
+      #     causes, kept off demo-regression so the triage demo keeps its one-line story
+      - name: Check out qa-triage build
+        uses: actions/checkout@v4
+        with:
+          ref: demo-qa-triage
+          path: qa-triage
+
+      # (d) the PR head at /preview/ — the reason this workflow exists
       - name: Check out PR head (preview)
         uses: actions/checkout@v4
         with:
@@ -91,7 +99,7 @@ jobs:
         shell: bash
         run: |
           missing=0
-          for d in regression preview; do
+          for d in regression qa-triage preview; do
             if [ -d "$d" ]; then
               echo "ok:      $d/ present"
             else
@@ -124,6 +132,11 @@ jobs:
             echo
             echo "--- regression/app.js setSort (expect NO 'page = 1') ---"
             grep -n 'setSort(v)' regression/app.js || echo "regression/app.js NOT FOUND"
+            echo
+            echo "--- qa-triage/app.js: expect ALL THREE defects present ---"
+            grep -c 'favorites-filter-toggle' qa-triage/app.js | sed 's/^/  A stale-selector rename:  /'
+            grep -c 'JSON.stringify(arr)); }' qa-triage/app.js | sed 's/^/  B badge refresh dropped:  /'
+            grep -n 'setSort(v)' qa-triage/app.js || echo "  qa-triage/app.js NOT FOUND"
           } > deploy-manifest.txt
           cat deploy-manifest.txt
 
