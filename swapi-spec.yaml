@@ -1,0 +1,112 @@
+openapi: 3.0.0
+info:
+  title: SWAPI (swapi.tech)
+  version: "1.0"
+  description: Star Wars API used by Galaxy Explorer
+servers:
+  - url: https://swapi.tech/api
+paths:
+  /people/:
+    get:
+      operationId: listPeople
+      summary: List all characters
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, results]
+                properties:
+                  message:
+                    type: string
+                    example: ok
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [uid, name, url]
+                      properties:
+                        uid:  { type: string }
+                        name: { type: string }
+                        url:  { type: string }
+  /people/{id}/:
+    get:
+      operationId: getPerson
+      summary: Get a single character by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+          example: "1"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, result]
+                properties:
+                  message: { type: string }
+                  result:
+                    type: object
+                    properties:
+                      uid: { type: string }
+                      properties:
+                        type: object
+                        required: [name, height, mass, birth_year]
+                        properties:
+                          name:       { type: string }
+                          height:     { type: string }
+                          mass:       { type: string }
+                          birth_year: { type: string }
+                          homeworld:  { type: string }
+  /planets/:
+    get:
+      operationId: listPlanets
+      summary: List all planets
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, results]
+                properties:
+                  message: { type: string }
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [uid, name, url]
+                      properties:
+                        uid:  { type: string }
+                        name: { type: string }
+                        url:  { type: string }
+  /starships/:
+    get:
+      operationId: listStarships
+      summary: List all starships
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, results]
+                properties:
+                  message: { type: string }
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [uid, name, url]
+                      properties:
+                        uid:  { type: string }
+                        name: { type: string }
+                        url:  { type: string }
