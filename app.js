@@ -75,7 +75,7 @@
     try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; }
     catch (e) { return []; }
   }
-  function setFavs(arr) { localStorage.setItem(FAV_KEY, JSON.stringify(arr)); updateFavCount(); }
+  function setFavs(arr) { localStorage.setItem(FAV_KEY, JSON.stringify(arr)); }
   function isFav(cat, id) { return getFavs().some((f) => favKey(f.category, f.id) === favKey(cat, id)); }
   function toggleFav(cat, id, name, sub) {
     const favs = getFavs();
@@ -293,7 +293,7 @@
           </select>
         </div>
         <label class="fav-only ${s.favOnly ? 'on' : ''}" data-testid="favorites-only" title="Show only your favorited ${sc.label.toLowerCase()}">
-          <input type="checkbox" data-testid="favorites-only-toggle" ${s.favOnly ? 'checked' : ''}
+          <input type="checkbox" data-testid="favorites-filter-toggle" ${s.favOnly ? 'checked' : ''}
                  aria-label="Show favorites only" onchange="GalaxyApp.toggleFavOnly(this.checked)">
           <span class="material-symbols-rounded">favorite</span>
           <span>Favorites only</span>
@@ -537,7 +537,7 @@
       rerenderGrid(c);
       if (focused) { const ni = document.querySelector('[data-testid="search-input"]'); ni.focus(); ni.setSelectionRange(ni.value.length, ni.value.length); }
     },
-    setSort(v) { const c = parseRoute().category; ui[c].sort = v; ui[c].page = 1; rerenderGrid(c); },
+    setSort(v) { const c = parseRoute().category; ui[c].sort = v; rerenderGrid(c); },
     setPage(p) { const c = parseRoute().category; ui[c].page = p; rerenderGrid(c); },
     toggleFavOnly(on) {
       const c = parseRoute().category;
