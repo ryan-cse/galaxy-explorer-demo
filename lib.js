@@ -117,5 +117,67 @@
     return { name: 'home' };
   }
 
-  return { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, parseHashRoute, COMPARE_MAX };
+  // Feature: clock timezone + display format (SUP-19).
+  // Zones are IANA ids, never fixed offsets, so the rendered time stays correct
+  // across a DST boundary. Order here is the order the dropdown renders in.
+  const CLOCK_ZONES = [
+    { id: 'UTC', label: 'Galactic Standard (UTC)' },
+    { id: 'America/New_York', label: 'Eastern Time' },
+    { id: 'America/Chicago', label: 'Central Time' },
+    { id: 'America/Denver', label: 'Mountain Time' },
+    { id: 'America/Los_Angeles', label: 'Pacific Time' },
+  ];
+
+  // Defaults preserve the pre-SUP-19 behaviour: UTC, 24-hour.
+  const CLOCK_DEFAULTS = { zone: 'UTC', hour12: false };
+
+  function isKnownZone(id) {
+    return CLOCK_ZONES.some((z) => z.id === id);
+  }
+
+  // Coerce whatever came out of localStorage into a usable prefs object.
+  // Accepts a raw JSON string or an already-parsed object; anything corrupt,
+  // partial, or naming an unknown zone falls back to CLOCK_DEFAULTS.
+  function normalizeClockPrefs(raw) {
+    let o = raw;
+    if (typeof raw === 'string') {
+      try { o = JSON.parse(raw); } catch (e) { o = null; }
+    }
+    if (!o || typeof o !== 'object') return { zone: CLOCK_DEFAULTS.zone, hour12: CLOCK_DEFAULTS.hour12 };
+    return {
+      zone: isKnownZone(o.zone) ? o.zone : CLOCK_DEFAULTS.zone,
+      hour12: o.hour12 === true,
+    };
+  }
+
+  // Render an instant as clock text in the given zone.
+  //   hour12 false → "14:23:07"      (h23, zero-padded, no meridiem)
+  //   hour12 true  → "2:23:07 PM"    (12 at both midnight and noon)
+  // Intl emits U+202F before the meridiem on newer ICU builds; normalise it to a
+  // plain space so assertions can match on an ordinary " AM"/" PM".
+  function formatClockTime(date, zone, hour12) {
+    const tz = isKnownZone(zone) ? zone : CLOCK_DEFAULTS.zone;
+    const opts = { timeZone: tz, minute: '2-digit', second: '2-digit' };
+    if (hour12) {
+      opts.hour = 'numeric';
+      opts.hour12 = true;
+    } else {
+      opts.hour = '2-digit';
+      opts.hour12 = false;
+      opts.hourCycle = 'h23';
+    }
+    return new Intl.DateTimeFormat('en-US', opts).format(date).replace(/[\u202f\u00a0]/g, ' ');
+  }
+
+  // Short form of the zone at that instant — "UTC", "EDT" in summer, "EST" in winter.
+  function clockZoneLabel(date, zone) {
+    const tz = isKnownZone(zone) ? zone : CLOCK_DEFAULTS.zone;
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' })
+      .formatToParts(date);
+    const found = parts.find((p) => p.type === 'timeZoneName');
+    return found ? found.value : tz;
+  }
+
+  return { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, parseHashRoute, COMPARE_MAX,
+           CLOCK_ZONES, CLOCK_DEFAULTS, isKnownZone, normalizeClockPrefs, formatClockTime, clockZoneLabel };
 });

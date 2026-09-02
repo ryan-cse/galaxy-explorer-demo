@@ -1,6 +1,7 @@
 /* Unit tests for Galaxy Explorer pure logic (lib.js).
    Run with: npm test   (Vitest, globals enabled — no imports needed). */
-const { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, parseHashRoute, COMPARE_MAX } = require('../lib.js');
+const { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, parseHashRoute, COMPARE_MAX,
+        CLOCK_ZONES, CLOCK_DEFAULTS, isKnownZone, normalizeClockPrefs, formatClockTime, clockZoneLabel } = require('../lib.js');
 
 describe('num', () => {
   it('parses plain integers', () => {
@@ -194,5 +195,93 @@ describe('parseHashRoute', () => {
   it('falls back to Home for unrecognised routes', () => {
     expect(parseHashRoute('#/nope')).toEqual({ name: 'home' });
     expect(parseHashRoute('#/garbage/path')).toEqual({ name: 'home' });
+  });
+});
+
+/* ── SUP-19: clock timezone + display format ─────────────────── */
+
+// Fixed instants, so none of these assertions depend on the wall clock.
+const SUMMER = new Date(Date.UTC(2026, 8, 2, 18, 23, 7));   // 2026-09-02 18:23:07Z — US DST in effect
+const WINTER = new Date(Date.UTC(2026, 0, 15, 18, 23, 7));  // 2026-01-15 18:23:07Z — US standard time
+const ET_MIDNIGHT = new Date(Date.UTC(2026, 8, 2, 4, 14, 0));  // 00:14 in New York
+const ET_NOON = new Date(Date.UTC(2026, 8, 2, 16, 14, 0));     // 12:14 in New York
+
+describe('CLOCK_ZONES / isKnownZone', () => {
+  it('offers UTC plus the four US zones, UTC first', () => {
+    expect(CLOCK_ZONES.map((z) => z.id)).toEqual([
+      'UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+    ]);
+  });
+  it('defaults to UTC in 24-hour', () => {
+    expect(CLOCK_DEFAULTS).toEqual({ zone: 'UTC', hour12: false });
+  });
+  it('recognises listed zones and rejects everything else', () => {
+    expect(isKnownZone('America/New_York')).toBe(true);
+    expect(isKnownZone('Europe/Paris')).toBe(false);
+    expect(isKnownZone(undefined)).toBe(false);
+  });
+});
+
+describe('formatClockTime', () => {
+  it('renders 24-hour time zero-padded with no meridiem', () => {
+    expect(formatClockTime(SUMMER, 'UTC', false)).toBe('18:23:07');
+    expect(formatClockTime(SUMMER, 'America/New_York', false)).toBe('14:23:07');
+  });
+  it('applies the zone offset, not a fixed one, across DST', () => {
+    expect(formatClockTime(SUMMER, 'America/New_York', false)).toBe('14:23:07'); // UTC-4
+    expect(formatClockTime(WINTER, 'America/New_York', false)).toBe('13:23:07'); // UTC-5
+  });
+  it('renders 12-hour time with a plain-space meridiem', () => {
+    expect(formatClockTime(SUMMER, 'America/New_York', true)).toBe('2:23:07 PM');
+    expect(formatClockTime(SUMMER, 'America/Los_Angeles', true)).toBe('11:23:07 AM');
+  });
+  it('uses 12, not 0, at both midnight and noon', () => {
+    expect(formatClockTime(ET_MIDNIGHT, 'America/New_York', true)).toBe('12:14:00 AM');
+    expect(formatClockTime(ET_NOON, 'America/New_York', true)).toBe('12:14:00 PM');
+  });
+  it('zero-pads the midnight hour in 24-hour mode', () => {
+    expect(formatClockTime(ET_MIDNIGHT, 'America/New_York', false)).toBe('00:14:00');
+  });
+  it('falls back to UTC for an unknown zone instead of throwing', () => {
+    expect(formatClockTime(SUMMER, 'Europe/Paris', false)).toBe('18:23:07');
+    expect(formatClockTime(SUMMER, undefined, false)).toBe('18:23:07');
+  });
+});
+
+describe('clockZoneLabel', () => {
+  it('labels UTC as UTC', () => {
+    expect(clockZoneLabel(SUMMER, 'UTC')).toBe('UTC');
+  });
+  it('tracks daylight vs standard time in the abbreviation', () => {
+    expect(clockZoneLabel(SUMMER, 'America/New_York')).toBe('EDT');
+    expect(clockZoneLabel(WINTER, 'America/New_York')).toBe('EST');
+  });
+  it('falls back to UTC for an unknown zone', () => {
+    expect(clockZoneLabel(SUMMER, 'Europe/Paris')).toBe('UTC');
+  });
+});
+
+describe('normalizeClockPrefs', () => {
+  it('passes a valid object through', () => {
+    expect(normalizeClockPrefs({ zone: 'America/Denver', hour12: true }))
+      .toEqual({ zone: 'America/Denver', hour12: true });
+  });
+  it('parses a stored JSON string', () => {
+    expect(normalizeClockPrefs('{"zone":"America/Chicago","hour12":true}'))
+      .toEqual({ zone: 'America/Chicago', hour12: true });
+  });
+  it('falls back to defaults on corrupt or missing storage', () => {
+    expect(normalizeClockPrefs('not json at all')).toEqual({ zone: 'UTC', hour12: false });
+    expect(normalizeClockPrefs(null)).toEqual({ zone: 'UTC', hour12: false });
+    expect(normalizeClockPrefs(undefined)).toEqual({ zone: 'UTC', hour12: false });
+    expect(normalizeClockPrefs(42)).toEqual({ zone: 'UTC', hour12: false });
+  });
+  it('rejects an unknown zone but keeps the valid half of the object', () => {
+    expect(normalizeClockPrefs({ zone: 'Europe/Paris', hour12: true }))
+      .toEqual({ zone: 'UTC', hour12: true });
+  });
+  it('treats any non-true hour12 as 24-hour', () => {
+    expect(normalizeClockPrefs({ zone: 'UTC', hour12: 'yes' }).hour12).toBe(false);
+    expect(normalizeClockPrefs({ zone: 'UTC' }).hour12).toBe(false);
   });
 });

@@ -32,9 +32,17 @@
 
     <span class="topbar-spacer"></span>
 
-    <div class="clock" data-testid="clock" title="Galactic Standard Time (UTC)" aria-label="Galactic Standard Time">
+    <div class="clock" data-testid="clock" aria-label="Galactic Standard Time">
       <span class="material-symbols-rounded">schedule</span>
       <time data-testid="clock-time"></time>
+      <span class="clock-zone" data-testid="clock-zone-label"></span>
+      <select class="clock-select" data-testid="clock-timezone" aria-label="Clock timezone"
+              onchange="GalaxyApp.setClockZone(this.value)"></select>
+      <select class="clock-select" data-testid="clock-format" aria-label="Clock time format"
+              onchange="GalaxyApp.setClockFormat(this.value)">
+        <option value="24">24-hour</option>
+        <option value="12">12-hour</option>
+      </select>
     </div>
 
     <button class="btn btn-text" data-testid="nav-favorites" onclick="GalaxyApp.go('#/favorites')">
