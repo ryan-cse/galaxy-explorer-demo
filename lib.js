@@ -162,11 +162,14 @@
       opts.hour = 'numeric';
       opts.hour12 = true;
     } else {
+      // hourCycle ONLY - passing hour12 alongside it silently overrides it, and
+      // older ICU resolves en-US hour12:false to h24, rendering midnight "24:14:00".
       opts.hour = '2-digit';
-      opts.hour12 = false;
       opts.hourCycle = 'h23';
     }
-    return new Intl.DateTimeFormat('en-US', opts).format(date).replace(/[\u202f\u00a0]/g, ' ');
+    const out = new Intl.DateTimeFormat('en-US', opts).format(date).replace(/[\u202f\u00a0]/g, ' ');
+    // Belt and braces: no ICU version may hand us a 24th hour.
+    return hour12 ? out : out.replace(/^24:/, '00:');
   }
 
   // Short form of the zone at that instant — "UTC", "EDT" in summer, "EST" in winter.
