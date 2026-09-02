@@ -128,7 +128,10 @@ jobs:
   #     marked and land in the Damien-approved SUP project.
   report-failure:
     needs: e2e
-    if: failure()
+    # NOT failure() — that is true when ANY earlier job failed, so a unit-gate
+    # failure (which skips e2e entirely) filed a ticket blaming mabl for a stage
+    # that never ran. Gate on the e2e job's own result instead.
+    if: ${{ needs.e2e.result == 'failure' }}
     runs-on: ubuntu-latest
     steps:
       - name: Create Jira issue (SUP)
@@ -136,7 +139,7 @@ jobs:
           AUTH=$(echo -n "${{ secrets.JIRA_EMAIL }}:${{ secrets.JIRA_API_TOKEN }}" | base64 -w 0)
           SHA_SHORT=$(echo '${{ github.sha }}' | cut -c1-8)
           SUMMARY="[Galaxy Explorer DEMO] mabl E2E failure @ ${SHA_SHORT}"
-          BODY="Automated mabl E2E suite failed after deploying to GitHub Pages.\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Actor:* ${{ github.actor }}\n*Workflow run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n*Reproduction:* open https://ryan-cse.github.io/galaxy-explorer-demo/?demo=true and run the 'Favorites only' flow."
+          BODY="Automated mabl E2E suite failed after deploying to GitHub Pages.\n\n*Commit:* ${{ github.sha }}\n*Branch:* ${{ github.ref_name }}\n*Actor:* ${{ github.actor }}\n*Workflow run:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n*Failing tests:* see the mabl results linked from the workflow run above. Do not assume a flow — read the run."
           curl -sf -X POST \
             "${{ secrets.JIRA_BASE_URL }}/rest/api/3/issue" \
             -H "Authorization: Basic $AUTH" \
