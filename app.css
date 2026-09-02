@@ -74,6 +74,13 @@ body { background: var(--bg-canvas); }
 }
 .clock .material-symbols-rounded { font-size: 16px; color: var(--purple-600); }
 .clock time { color: var(--fg-primary); letter-spacing: 0.02em; }
+.clock-zone { color: var(--fg-secondary); font-size: var(--fs-xs); letter-spacing: 0.04em; }
+.clock-select {
+  font-family: var(--font-body); font-size: var(--fs-xs); font-weight: var(--weight-semibold);
+  color: var(--fg-secondary); background: transparent; border: 0; cursor: pointer;
+  padding: 0 2px; max-width: 132px;
+}
+.clock-select:focus-visible { outline: 2px solid var(--purple-600); outline-offset: 2px; border-radius: var(--radius-sm); }
 @media (max-width: 880px) { .clock { display: none; } }
 .fav-count[hidden] { display: none; }
 .fav-count {

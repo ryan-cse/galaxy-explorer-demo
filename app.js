@@ -10,9 +10,11 @@
 (function () {
   const { load, SCHEMA, cap, categories } = window.GalaxyData;
   // Pure logic lives in lib.js (unit-tested in tests/lib.test.js).
-  const { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, parseHashRoute, COMPARE_MAX } = window.GalaxyLib;
+  const { num, shortNum, favKey, filterFavoritesOnly, toggleCompare, buildComparison, parseHashRoute, COMPARE_MAX,
+          CLOCK_ZONES, CLOCK_DEFAULTS, normalizeClockPrefs, formatClockTime, clockZoneLabel } = window.GalaxyLib;
   const PAGE_SIZE = 6;
   const FAV_KEY = 'galaxy.favorites';
+  const CLOCK_PREFS_KEY = 'galaxy.clock';
 
   // Compare tray (starships only) — session state, intentionally NOT persisted.
   // Spec rows shown in the side-by-side table, in order.
@@ -538,6 +540,14 @@
       if (focused) { const ni = document.querySelector('[data-testid="search-input"]'); ni.focus(); ni.setSelectionRange(ni.value.length, ni.value.length); }
     },
     setSort(v) { const c = parseRoute().category; ui[c].sort = v; ui[c].page = 1; rerenderGrid(c); },
+    setClockZone(id) {
+      clockPrefs = normalizeClockPrefs({ zone: id, hour12: clockPrefs.hour12 });
+      writeClockPrefs(); renderClock();
+    },
+    setClockFormat(v) {
+      clockPrefs = normalizeClockPrefs({ zone: clockPrefs.zone, hour12: String(v) === '12' });
+      writeClockPrefs(); renderClock();
+    },
     setPage(p) { const c = parseRoute().category; ui[c].page = p; rerenderGrid(c); },
     toggleFavOnly(on) {
       const c = parseRoute().category;
@@ -658,19 +668,42 @@
       </div>`;
   }
 
-  // Live "Galactic Standard Time" clock (UTC). The datetime attr is ISO-formatted
-  // so mabl can read and compare it against local time for clock accuracy tests.
-  function startClock() {
+  // ── Clock: timezone + 12/24-hour, persisted (SUP-19) ──────────
+  // The datetime attribute always carries the absolute UTC instant; only the
+  // rendered text is localised, so display and instant never drift apart.
+  let clockPrefs = readClockPrefs();
+
+  function readClockPrefs() {
+    try { return normalizeClockPrefs(localStorage.getItem(CLOCK_PREFS_KEY)); }
+    catch (e) { return { zone: CLOCK_DEFAULTS.zone, hour12: CLOCK_DEFAULTS.hour12 }; }
+  }
+
+  function writeClockPrefs() {
+    try { localStorage.setItem(CLOCK_PREFS_KEY, JSON.stringify(clockPrefs)); }
+    catch (e) { /* storage unavailable — prefs stay session-only */ }
+  }
+
+  function renderClock() {
     const el = document.querySelector('[data-testid="clock-time"]');
     if (!el) return;
-    const tick = () => {
-      const d = new Date();
-      const p = (n) => String(n).padStart(2, '0');
-      el.textContent = `${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
-      el.setAttribute('datetime', d.toISOString());
-    };
-    tick();
-    setInterval(tick, 1000);
+    const d = new Date();
+    el.textContent = formatClockTime(d, clockPrefs.zone, clockPrefs.hour12);
+    el.setAttribute('datetime', d.toISOString());
+    const label = document.querySelector('[data-testid="clock-zone-label"]');
+    if (label) label.textContent = clockZoneLabel(d, clockPrefs.zone);
+  }
+
+  function startClock() {
+    const tz = document.querySelector('[data-testid="clock-timezone"]');
+    if (tz) {
+      tz.innerHTML = CLOCK_ZONES.map((z) =>
+        `<option value="${esc(z.id)}">${esc(z.label)}</option>`).join('');
+      tz.value = clockPrefs.zone;
+    }
+    const fmt = document.querySelector('[data-testid="clock-format"]');
+    if (fmt) fmt.value = clockPrefs.hour12 ? '12' : '24';
+    renderClock();
+    setInterval(renderClock, 1000);
   }
 
   window.addEventListener('hashchange', route);
