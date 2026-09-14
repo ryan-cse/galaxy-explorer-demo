@@ -171,10 +171,16 @@ jobs:
   #     marked and land in the Damien-approved SUP project.
   report-failure:
     needs: e2e
-    # NOT failure() — that is true when ANY earlier job failed, so a unit-gate
+    # NOT a bare failure() — that is true when ANY earlier job failed, so a unit-gate
     # failure (which skips e2e entirely) filed a ticket blaming mabl for a stage
     # that never ran. Gate on the e2e job's own result instead.
-    if: ${{ needs.e2e.result == 'failure' }}
+    #
+    # always() is REQUIRED here and is not redundant. A job with `needs:` carries an
+    # implicit success() on that dependency, and a custom `if:` does NOT replace it
+    # unless the expression calls one of the status functions. Without always() this
+    # job is skipped precisely when e2e fails — i.e. it never ran, ever. Confirmed on
+    # run 34870513446 (2026-09-14): e2e failed, report-failure was skipped.
+    if: ${{ always() && needs.e2e.result == 'failure' }}
     runs-on: ubuntu-latest
     steps:
       - name: Create Jira issue (SUP)
