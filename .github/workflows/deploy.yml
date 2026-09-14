@@ -63,6 +63,18 @@ jobs:
           ref: demo-regression
           path: regression
 
+      # Stage a healthy build at /preview/ as well. actions/deploy-pages publishes ONE
+      # artifact for the whole site, so a main deploy that omitted this subpath would
+      # DELETE /preview/ — which is exactly how the `demo | preview` environment ended
+      # up pointing at a 404. preview.yml overwrites this with the PR head when a
+      # ci/*, feature/* or preview/* branch is pushed; between those pushes the URL
+      # stays live and healthy, which is what the triage A/B needs from it.
+      - name: Check out preview build
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: preview
+
       # Writes what actually got packaged into the published site itself, so the
       # deploy can be verified by fetching a URL rather than by reading run logs.
       # Filename deliberately has NO leading underscore — Jekyll excludes those.
@@ -88,10 +100,41 @@ jobs:
               echo "NO - regression directory is missing from the workspace"
             fi
             echo
+            echo "--- preview/ present? ---"
+            if [ -d preview ]; then
+              echo "YES"
+              echo "--- preview/app.js setSort (expect 'page = 1' — preview is healthy) ---"
+              grep -n 'setSort(v)' preview/app.js || echo "preview/app.js NOT FOUND"
+            else
+              echo "NO - preview directory is missing from the workspace"
+            fi
+            echo
             echo "--- main app.js setSort (expect 'page = 1') ---"
             grep -n 'setSort(v)' app.js
           } > deploy-manifest.txt
           cat deploy-manifest.txt
+
+      # Fail loudly and BEFORE publishing if a subpath is missing. Because Pages
+      # ships one artifact for the whole site, shipping a partial one silently takes
+      # down a URL another demo depends on. A failed job leaves the previous
+      # deployment live, so refusing to publish is always the safer outcome.
+      - name: Verify all builds are staged
+        shell: bash
+        run: |
+          missing=0
+          for d in regression preview; do
+            if [ -d "$d" ]; then
+              echo "ok:      $d/ present"
+            else
+              echo "MISSING: $d/ — refusing to publish a partial site"
+              missing=1
+            fi
+          done
+          if [ ! -f index.html ]; then
+            echo "MISSING: index.html at site root — refusing to publish"
+            missing=1
+          fi
+          [ "$missing" -eq 0 ] || exit 1
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
