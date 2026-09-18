@@ -87,6 +87,17 @@ jobs:
           ref: demo-qa-triage
           path: qa-triage
 
+      # Stage the pre-feature build at /staging/. This build predates the topbar
+      # clock's timezone + 12/24-hour selectors, so /staging/ genuinely LACKS a
+      # feature that the root build has. That gives the cross-environment demo a
+      # real feature skew to promote a test across -- as opposed to /regression/
+      # and /qa-triage/, whose differences are deliberate DEFECTS.
+      - name: Check out staging build
+        uses: actions/checkout@v4
+        with:
+          ref: demo-staging
+          path: staging
+
       # Writes what actually got packaged into the published site itself, so the
       # deploy can be verified by fetching a URL rather than by reading run logs.
       # Filename deliberately has NO leading underscore — Jekyll excludes those.
@@ -137,7 +148,7 @@ jobs:
         shell: bash
         run: |
           missing=0
-          for d in regression preview qa-triage; do
+          for d in regression preview qa-triage staging; do
             if [ -d "$d" ]; then
               echo "ok:      $d/ present"
             else
