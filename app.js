@@ -180,7 +180,7 @@
         <button class="compare-btn ${on ? 'on' : ''}" data-testid="compare-toggle" data-id="${esc(item.id)}"
                 aria-pressed="${on}" ${capped ? 'disabled' : ''}
                 aria-label="${on ? 'Remove from comparison' : 'Add to comparison'}"
-                title="${capped ? 'Maximum of ' + COMPARE_MAX + ' starships selected' : (on ? 'Remove from comparison' : 'Add to comparison')}"
+                title="${capped ? 'You can compare up to ' + COMPARE_MAX + ' starships' : (on ? 'Remove from comparison' : 'Add to comparison')}"
                 onclick="event.stopPropagation();GalaxyApp.compareToggle('${esc(item.id)}')">
           <span class="material-symbols-rounded">${on ? 'check_circle' : 'balance'}</span>
           <span>${on ? 'Comparing' : 'Compare'}</span>
