@@ -11,6 +11,9 @@ jobs:
       stage: pull_request
       workspace-id: rafVMAVBi1JisbmsIGezOQ-w
       comment: true
+      # The default 15-minute window ends before mabl finishes analyzing this app.
+      comment-wait-minutes: 40
+      timeout-minutes: 45
     secrets:
       # Command Line Interface key; the CI/CD integration key in MABL_API_KEY is refused.
       mabl-api-key: ${{ secrets.MABL_CV_API_KEY }}
