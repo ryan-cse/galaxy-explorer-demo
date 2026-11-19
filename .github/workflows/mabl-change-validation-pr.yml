@@ -1,0 +1,19 @@
+name: mabl change validation (pull request)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  mabl:
+    uses: mablhq/change-validation-action/.github/workflows/pull-request.yml@v1
+    with:
+      stage: pull_request
+      workspace-id: rafVMAVBi1JisbmsIGezOQ-w
+      comment: true
+    secrets:
+      # Command Line Interface key; the CI/CD integration key in MABL_API_KEY is refused.
+      mabl-api-key: ${{ secrets.MABL_CV_API_KEY }}
+    permissions:
+      contents: read
+      pull-requests: write

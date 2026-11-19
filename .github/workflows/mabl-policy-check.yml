@@ -1,0 +1,13 @@
+name: mabl policy check
+
+on:
+  pull_request:
+    paths: ['.mabl/**']
+
+jobs:
+  policy:
+    uses: mablhq/change-validation-action/.github/workflows/policy-check.yml@v1
+    secrets:
+      mabl-api-key: ${{ secrets.MABL_CV_API_KEY }}
+    permissions:
+      contents: read

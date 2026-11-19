@@ -1,0 +1,36 @@
+# mabl change validation policy. Reference:
+# https://github.com/mablhq/change-validation-action/blob/main/docs/policy-file.md
+# Read from the branch a pull request targets, so edits apply once merged.
+version: 1
+
+suites:
+  smoke:
+    plan_labels: [ci]
+
+impacted:
+  exclude:
+    test_labels: [retired]
+
+applications:
+  web:
+    mabl_application: 'Br0eZ3YutwooN7FSPSrNzA-a'
+    target:
+      # The environment also holds the API endpoint, so pin the site URL.
+      url: 'https://ryan-cse.github.io/galaxy-explorer-demo/?demo=true'
+      environment: 'SBwvwlmXrn7ZCgRui1wcBQ-e'
+    stages:
+      # No per-PR preview: list impacted tests for the reviewer without running them.
+      pull_request:
+        checks:
+          - kind: impacted
+            run: false
+      # After main deploys to Pages. Revision scope keeps PR status from waiting on it.
+      staging:
+        scope: revision
+        checks:
+          - kind: suite
+            suite: smoke
+            must_pass: true
+          - kind: impacted
+            must_pass: true
+            waiver: {label: skip-impacted-tests}

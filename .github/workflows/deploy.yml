@@ -192,6 +192,25 @@ jobs:
           # browser-types: chrome            # optional override
           # continue-on-failure: false       # default: fail the job (and PR check) on any test failure
 
+  # ── 3b. mabl change validation: gate the deployed commit ──────────
+  #     Runs the `staging` stage (scope: revision) from .mabl/policy.yaml and
+  #     publishes commit status `mabl-staging`. Overlaps with e2e: both run
+  #     the `ci` plan.
+  change-validation:
+    needs: deploy
+    uses: mablhq/change-validation-action/.github/workflows/deployed-commit.yml@v1
+    with:
+      stage: staging
+      await: true
+      status-context: mabl-staging
+      workspace-id: rafVMAVBi1JisbmsIGezOQ-w
+    secrets:
+      mabl-api-key: ${{ secrets.MABL_CV_API_KEY }}
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+
   # ── 4. Report failures → Jira (SUP) + Slack ───────────────────────
   #     Only runs when the mabl E2E job failed. Demo tickets are clearly
   #     marked and land in the Damien-approved SUP project.
