@@ -41,12 +41,9 @@ jobs:
 
   # ── 2. Deploy the static site to GitHub Pages (official actions) ───
   #     Requires: repo Settings → Pages → Source = "GitHub Actions".
-  deploy:
+  build:
     needs: unit-test
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -166,6 +163,17 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: '.'            # static app lives at repo root
+
+  # Separate job: deploy-pages can miss an artifact uploaded moments earlier in the
+  # same job (actions/deploy-pages#451). This also lets "Re-run failed jobs" retry
+  # only the deploy, against the one artifact the build already uploaded.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
 
